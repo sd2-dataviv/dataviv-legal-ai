@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",
+    "ms-python.mypy-type-checker",
+    "ms-azuretools.vscode-docker",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "humao.rest-client",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml",
+    "github.vscode-github-actions",
+    "streetsidesoftware.code-spell-checker-british-english"
+  ]
+}

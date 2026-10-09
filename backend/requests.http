@@ -1,0 +1,27 @@
+### Dataviv AI OS — manual API checks (VS Code "REST Client" extension: click "Send Request")
+### Paste a token printed by `make seed` / task "3 · Seed dev data".
+@base = http://localhost:8000
+@token = PASTE_PARTNER_TOKEN_HERE
+
+GET {{base}}/health
+
+###
+GET {{base}}/v1/me
+Authorization: Bearer {{token}}
+
+###
+GET {{base}}/v1/matters
+Authorization: Bearer {{token}}
+
+###
+POST {{base}}/v1/matters
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Rao v. Union of India — writ petition",
+  "client_name": "S. Rao",
+  "matter_type": "litigation",
+  "forum": "Supreme Court of India",
+  "practice_area": "Constitutional"
+}

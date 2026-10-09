@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API: FastAPI (debug, reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Tests: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-x", "-vv"],
+      "cwd": "${workspaceFolder}/backend",
+      "justMyCode": false
+    },
+    {
+      "name": "Tests: all",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-x"],
+      "cwd": "${workspaceFolder}/backend",
+      "justMyCode": false
+    },
+    {
+      "name": "Script: seed dev data",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/seed_dev.py",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/backend/.env"
+    }
+  ]
+}

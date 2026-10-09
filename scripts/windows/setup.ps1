@@ -2,7 +2,7 @@
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\windows\setup.ps1
 # Creates .venv in the repo root, installs backend + dev dependencies, creates backend\.env,
 # installs the recommended VS Code extensions, and makes the first git commit if needed.
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'   # native tools write notices to stderr; failures are checked via exit codes
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
 $steps = 6; $n = 0

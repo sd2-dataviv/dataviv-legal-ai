@@ -2,7 +2,7 @@
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\windows\setup_db.ps1
 # Creates roles `dataviv` (schema owner) and `app_user` (what the API connects as, so RLS applies),
 # databases `dataviv` and `dataviv_test`, applies migrations, and seeds dev data. Safe to re-run.
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'   # native tools write notices to stderr; failures are checked via exit codes
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
 $steps = 5; $n = 0

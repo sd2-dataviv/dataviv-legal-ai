@@ -28,8 +28,10 @@ USERS = [
 MATTERS = [
     ("State v. Kumar — bail application", "Vikram Kumar", "Delhi High Court", "DLHC010230802020"),
     (
-        "Acme Ltd v. Zenith Pvt Ltd — commercial suit", "Acme Ltd",
-        "Delhi High Court (Commercial Division)", None,
+        "Acme Ltd v. Zenith Pvt Ltd — commercial suit",
+        "Acme Ltd",
+        "Delhi High Court (Commercial Division)",
+        None,
     ),
     ("Share purchase agreement — Project Lotus", "Lotus Holdings", None, None),
 ]
@@ -46,8 +48,10 @@ async def main() -> None:
         ids: dict[str, uuid.UUID] = {}
         for role, name, email in tqdm(USERS, desc="Users", unit="user"):
             uid = await conn.scalar(
-                text("INSERT INTO users (firm_id, email, name, role) VALUES (:f, :e, :n, :r) "
-                     "ON CONFLICT (firm_id, email) DO UPDATE SET name = EXCLUDED.name RETURNING id"),
+                text(
+                    "INSERT INTO users (firm_id, email, name, role) VALUES (:f, :e, :n, :r) "
+                    "ON CONFLICT (firm_id, email) DO UPDATE SET name = EXCLUDED.name RETURNING id"
+                ),
                 {"f": FIRM_ID, "e": email, "n": name, "r": role},
             )
             ids[role] = uid
@@ -57,14 +61,18 @@ async def main() -> None:
         to_seed = [] if existing else MATTERS  # re-running only refreshes tokens
         for title, client, forum, cnr in tqdm(to_seed, desc="Matters", unit="matter"):
             mid = await conn.scalar(
-                text("INSERT INTO matters (firm_id, title, client_name, forum, cnr, created_by) "
-                     "VALUES (:f, :t, :c, :fo, :cnr, :u) RETURNING id"),
+                text(
+                    "INSERT INTO matters (firm_id, title, client_name, forum, cnr, created_by) "
+                    "VALUES (:f, :t, :c, :fo, :cnr, :u) RETURNING id"
+                ),
                 {"f": FIRM_ID, "t": title, "c": client, "fo": forum, "cnr": cnr, "u": ids["partner"]},
             )
             for role, mrole in (("partner", "lead"), ("associate", "member")):
                 await conn.execute(
-                    text("INSERT INTO matter_members (matter_id, user_id, firm_id, matter_role) "
-                         "VALUES (:m, :u, :f, :r)"),
+                    text(
+                        "INSERT INTO matter_members (matter_id, user_id, firm_id, matter_role) "
+                        "VALUES (:m, :u, :f, :r)"
+                    ),
                     {"m": mid, "u": ids[role], "f": FIRM_ID, "r": mrole},
                 )
     await engine.dispose()

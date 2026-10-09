@@ -11,11 +11,15 @@ from tests.conftest import World
 
 async def test_every_table_has_rls(owner_engine: AsyncEngine) -> None:
     async with owner_engine.connect() as conn:
-        missing = (await conn.scalars(text(
-            "SELECT relname FROM pg_class WHERE relkind = 'r' "
-            "AND relnamespace = 'public'::regnamespace AND relname <> 'alembic_version' "
-            "AND NOT relrowsecurity"
-        ))).all()
+        missing = (
+            await conn.scalars(
+                text(
+                    "SELECT relname FROM pg_class WHERE relkind = 'r' "
+                    "AND relnamespace = 'public'::regnamespace AND relname <> 'alembic_version' "
+                    "AND NOT relrowsecurity"
+                )
+            )
+        ).all()
     assert missing == [], f"Tables without row-level security: {missing}"
 
 
@@ -37,8 +41,9 @@ async def test_cannot_write_into_another_firm(world: World) -> None:
     with pytest.raises(DBAPIError, match="row-level security"):
         async with tenant_session(world.firm_a) as s:
             await s.execute(
-                text("INSERT INTO matters (firm_id, title, client_name, created_by) "
-                     "VALUES (:f, 'x', 'x', :u)"),
+                text(
+                    "INSERT INTO matters (firm_id, title, client_name, created_by) VALUES (:f, 'x', 'x', :u)"
+                ),
                 {"f": world.firm_b, "u": world.partner_b.id},
             )
 

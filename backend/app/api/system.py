@@ -60,6 +60,12 @@ async def get_job(job_id: uuid.UUID, p: CurrentPrincipal, db: DB) -> JobOut:
     if job is None or (job.created_by != p.user_id and not p.is_admin):
         raise NotFound("Job not found")
     return JobOut(
-        id=job.id, kind=job.kind, status=job.status, progress=job.progress, done=job.done,
-        total=job.total, current_step=job.current_step, error=job.error,
+        id=job.id,
+        kind=job.kind,
+        status=job.status,
+        progress=job.progress,
+        done=job.done,
+        total=job.total,
+        current_step=job.current_step,
+        error=job.error,
     )

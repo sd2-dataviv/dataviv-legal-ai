@@ -29,6 +29,7 @@ from app.core.security import Role, issue_dev_token
 from app.db.session import dispose_engine
 from app.main import create_app
 
+
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """Run every async test on the session event loop, so pooled DB connections stay valid."""
     marker = pytest.mark.asyncio(loop_scope="session")
@@ -126,8 +127,12 @@ async def new_matter(client: AsyncClient, world: World) -> dict[str, object]:
     """A fresh matter led by partner A, so tests never share mutable state."""
     r = await client.post(
         "/v1/matters",
-        json={"title": f"State v Accused {uuid.uuid4().hex[:6]}", "client_name": "Accused",
-              "forum": "Delhi High Court", "cnr": "DLHC010230802020"},
+        json={
+            "title": f"State v Accused {uuid.uuid4().hex[:6]}",
+            "client_name": "Accused",
+            "forum": "Delhi High Court",
+            "cnr": "DLHC010230802020",
+        },
         headers=world.partner_a.headers,
     )
     assert r.status_code == 201, r.text

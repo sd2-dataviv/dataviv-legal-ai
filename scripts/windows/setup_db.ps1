@@ -5,7 +5,7 @@
 $ErrorActionPreference = 'Continue'   # native tools write notices to stderr; failures are checked via exit codes
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
-$steps = 5; $n = 0
+$steps = 6; $n = 0
 function Step($msg) { $script:n++; Write-Progress -Activity 'Database setup' -Status $msg -PercentComplete (100 * $script:n / $steps); Write-Host "`n[$script:n/$steps] $msg" -ForegroundColor Cyan }
 
 Step 'Finding PostgreSQL'
@@ -15,30 +15,42 @@ Write-Host "  using $($psql.FullName)"
 $svc = Get-Service -Name 'postgresql*' -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($svc -and $svc.Status -ne 'Running') { throw "Service $($svc.Name) is $($svc.Status). Start it from Services (services.msc)." }
 
-Step 'Connecting as the postgres superuser'
-$sec = Read-Host '  Password for the "postgres" user (set during PostgreSQL install)' -AsSecureString
-$env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
-function Psql([string]$db, [string]$sql) {
-  $ErrorActionPreference = 'Continue'   # psql NOTICEs go to stderr; judge by exit code instead
-  $out = & $psql.FullName -h localhost -U postgres -d $db -v ON_ERROR_STOP=1 -q -t -A -c $sql 2>&1
-  if ($LASTEXITCODE -ne 0) { throw "psql failed: $out" }
-  return $out
-}
-Psql 'postgres' 'SELECT 1' | Out-Null
-Write-Host '  connected'
+Step 'Checking for existing dev databases'
+$env:PGPASSWORD = 'dataviv_dev_only'
+$null = & $psql.FullName -h localhost -U dataviv -d dataviv_test -t -A -c 'SELECT 1' 2>&1
+$ready = ($LASTEXITCODE -eq 0)
+Remove-Item Env:PGPASSWORD
+if ($ready) {
+  Write-Host '  roles and databases already exist - skipping superuser steps (no password needed)'
+  $n += 2
+} else {
+  Step 'Connecting as the postgres superuser'
+  $sec = Read-Host '  Password for the "postgres" user (set during PostgreSQL install)' -AsSecureString
+  $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+  function Psql([string]$db, [string]$sql) {
+    $ErrorActionPreference = 'Continue'   # psql NOTICEs go to stderr; judge by exit code instead
+    $out = & $psql.FullName -h localhost -U postgres -d $db -v ON_ERROR_STOP=1 -q -t -A -c $sql 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "psql failed: $out" }
+    return $out
+  }
+  Psql 'postgres' 'SELECT 1' | Out-Null
+  Write-Host '  connected'
 
-Step 'Creating roles and databases'
-Psql 'postgres' @"
+  Step 'Creating roles and databases'
+  $roleSql = @"
 DO `$`$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dataviv') THEN CREATE ROLE dataviv LOGIN PASSWORD 'dataviv_dev_only'; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN CREATE ROLE app_user LOGIN PASSWORD 'app_user_dev_only'; END IF;
 END `$`$;
-"@ | Out-Null
-foreach ($db in 'dataviv', 'dataviv_test') {
-  $exists = Psql 'postgres' "SELECT 1 FROM pg_database WHERE datname = '$db'"
-  if (-not $exists) { Psql 'postgres' "CREATE DATABASE $db OWNER dataviv" | Out-Null; Write-Host "  created database $db" } else { Write-Host "  database $db already exists" }
+"@
+  Psql 'postgres' $roleSql | Out-Null
+  foreach ($db in 'dataviv', 'dataviv_test') {
+    $exists = Psql 'postgres' "SELECT 1 FROM pg_database WHERE datname = '$db'"
+    if (-not $exists) { Psql 'postgres' "CREATE DATABASE $db OWNER dataviv" | Out-Null; Write-Host "  created database $db" } else { Write-Host "  database $db already exists" }
+  }
+  Remove-Item Env:PGPASSWORD
+
 }
-Remove-Item Env:PGPASSWORD
 
 Step 'Applying migrations to dataviv'
 $vpy = Join-Path $root '.venv\Scripts\python.exe'

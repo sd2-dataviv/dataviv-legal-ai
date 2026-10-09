@@ -38,8 +38,10 @@ async def test_tampering_breaks_the_chain(client: AsyncClient, owner_engine: Asy
     # Only the schema owner can do this; app_user is denied UPDATE (see test_rls).
     async with owner_engine.begin() as conn:
         await conn.execute(
-            text("UPDATE audit_events SET detail = '{\"title\": \"edited\"}' "
-                 "WHERE id = (SELECT min(id) FROM audit_events WHERE firm_id = :f)"),
+            text(
+                'UPDATE audit_events SET detail = \'{"title": "edited"}\' '
+                "WHERE id = (SELECT min(id) FROM audit_events WHERE firm_id = :f)"
+            ),
             {"f": firm},
         )
 

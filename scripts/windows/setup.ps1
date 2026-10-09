@@ -34,16 +34,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
   foreach ($e in $ext) { $i++; Write-Host ("  ({0}/{1}) {2}" -f $i, $ext.Count, $e); & code --install-extension $e --force | Out-Null }
 } else { Write-Host '  VS Code "code" command not on PATH - install extensions from the Extensions panel when prompted.' }
 
-Step 'Git identity and repository'
-$name = (& git config --global user.name)
-if (-not $name) {
-  & git config --global user.name (Read-Host '  Your name for git commits')
-  & git config --global user.email (Read-Host '  Your email for git commits')
-} else { Write-Host "  git user: $name" }
-if (-not (Test-Path '.git')) {
-  & git init -q -b main; & git add -A; & git commit -q -m 'Initial import'
-  Write-Host '  initialised repo and made the first commit'
-} else { Write-Host "  repo present: $(& git log --oneline -1)" }
+Step 'Git (skipped - configure later with: git config --global user.name / user.email)'
 
 Write-Progress -Activity 'Dataviv AI OS setup' -Completed
 Write-Host "`nSetup complete. Next: install PostgreSQL 16, then run scripts\windows\setup_db.ps1" -ForegroundColor Green

@@ -53,7 +53,9 @@ async def main() -> None:
             ids[role] = uid
             token = issue_dev_token(uid, FIRM_ID, role, email)  # type: ignore[arg-type]
             tokens.append((f"{role:<10} {email}", token))
-        for title, client, forum, cnr in tqdm(MATTERS, desc="Matters", unit="matter"):
+        existing = await conn.scalar(text("SELECT count(*) FROM matters WHERE firm_id = :f"), {"f": FIRM_ID})
+        to_seed = [] if existing else MATTERS  # re-running only refreshes tokens
+        for title, client, forum, cnr in tqdm(to_seed, desc="Matters", unit="matter"):
             mid = await conn.scalar(
                 text("INSERT INTO matters (firm_id, title, client_name, forum, cnr, created_by) "
                      "VALUES (:f, :t, :c, :fo, :cnr, :u) RETURNING id"),

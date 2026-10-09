@@ -22,29 +22,32 @@ tenant-isolated, matter-permissioned, fully audited core.
 
 ## Prerequisites
 
-Python 3.12+, Docker Desktop (or Docker Engine), VS Code, Git. `make` is optional — every command is also a VS Code task.
+Python 3.12+ (3.14 tested on Windows), Git, VS Code, and PostgreSQL 16 — either native or via Docker.
+`make` is optional; every command is also a VS Code task.
 
-## Quick start (VS Code)
+## Quick start — Windows (no Docker)
 
-1. Open the `dataviv-ai-os` folder in VS Code and install the recommended extensions when prompted.
-2. Terminal → in the repo root:
-   ```bash
-   cd backend
-   python3.12 -m venv .venv
-   source .venv/bin/activate          # Windows: .venv\Scripts\activate
-   pip install -e ".[dev]"
-   cp .env.example .env
-   cd ..
+1. Install PostgreSQL 16 and set a password for the `postgres` user when the installer asks:
+   ```powershell
+   winget install PostgreSQL.PostgreSQL.16 --interactive
    ```
-   Then `Ctrl+Shift+P → Python: Select Interpreter → backend/.venv`.
-3. `Ctrl+Shift+P → Tasks: Run Task`, in order:
-   - **1 · Start database** (Postgres 16 in Docker; creates `app_user` and `dataviv_test`)
-   - **2 · Migrate database**
-   - **3 · Seed dev data** (prints a token per user)
-4. Press **F5** → "API: FastAPI (debug, reload)". Open http://localhost:8000/docs, click **Authorize**, paste the partner token.
-5. Run tests: `Ctrl+Shift+P → Tasks: Run Test Task`, or the Testing sidebar.
+2. Open this folder in VS Code. `Ctrl+Shift+P → Tasks: Run Task`, in order:
+   - **0 · Windows: first-time setup** — creates `.venv`, installs dependencies, creates `backend\.env`, installs extensions, first git commit
+   - **1 · Database: start / prepare** — asks for the `postgres` password once, creates roles and databases, migrates, seeds, prints dev tokens
+3. `Ctrl+Shift+P → Python: Select Interpreter` → `.venv` (VS Code usually picks it automatically).
+4. Press **F5** → "API: FastAPI (debug, reload)". Open http://localhost:8000/docs, **Authorize**, paste the partner token.
+5. Tests: `Ctrl+Shift+P → Tasks: Run Test Task`, or the Testing sidebar.
 
-With `make`: `make setup up migrate seed api` and `make check`.
+`scripts\windows\check_requirements.bat` re-checks the machine at any time (read-only).
+
+## Quick start — macOS / Linux (Docker)
+
+```bash
+make setup up      # .venv + deps; Postgres 16 in Docker (creates app_user and dataviv_test)
+make migrate seed  # schema + dev data and tokens
+make api           # http://localhost:8000/docs
+make check         # lint + types + tests
+```
 
 ## How isolation works
 

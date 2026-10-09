@@ -12,3 +12,5 @@ node_modules/
 .next/
 dist/
 .DS_Store
+/check_requirements.*
+/requirements_report.txt

@@ -9,12 +9,12 @@ $status = Join-Path $root 'logs\bootstrap_status.txt'
 function Mark($s) { "$s $(Get-Date -Format s)" | Add-Content $status; Write-Host "`n=== $s ===" -ForegroundColor Yellow }
 
 Mark 'STEP 1/4 setup'
-& "$PSScriptRoot\setup.ps1" *>&1 | Tee-Object -FilePath logs\01_setup.log
-Mark "setup exit=$LASTEXITCODE ok=$?"
+try { & "$PSScriptRoot\setup.ps1" *>&1 | Tee-Object -FilePath logs\01_setup.log; Mark 'setup OK' }
+catch { $_ | Out-String | Add-Content logs\01_setup.log; Mark "setup FAILED: $($_.Exception.Message)" }
 
 Mark 'STEP 2/4 database'
-& "$PSScriptRoot\setup_db.ps1" *>&1 | Tee-Object -FilePath logs\02_database.log
-Mark "database ok=$?"
+try { & "$PSScriptRoot\setup_db.ps1" *>&1 | Tee-Object -FilePath logs\02_database.log; Mark 'database OK' }
+catch { $_ | Out-String | Add-Content logs\02_database.log; Mark "database FAILED: $($_.Exception.Message)" }
 
 $vpy = Join-Path $root '.venv\Scripts\python.exe'
 Push-Location backend

@@ -9,6 +9,10 @@
 | 005 | Temporal for durable jobs, workflows and agent runs | Accepted |
 | 006 | LiteLLM gateway with task classes; FakeLLM in tests | Accepted |
 | 007 | Inaccessible matters return 404, not 403 | Accepted |
+| 008 | PostgreSQL full-text search first; dense vectors added in Step 1c | Accepted |
+| 009 | Database job queue (`claim_next_job`, SKIP LOCKED) before Temporal | Accepted |
+| 010 | Storage adapter; content-addressed local disk in dev | Accepted |
+| 011 | Pure-Python dependencies where possible (Windows Smart App Control blocks unsigned native modules) | Accepted |
 
 ## ADR-002 — PostgreSQL RLS for tenancy
 

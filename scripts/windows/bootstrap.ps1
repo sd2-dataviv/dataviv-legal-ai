@@ -18,7 +18,9 @@ catch { $_ | Out-String | Add-Content logs\02_database.log; Mark "database FAILE
 
 $vpy = Join-Path $root '.venv\Scripts\python.exe'
 Push-Location backend
-Mark 'STEP 3/4 lint + types'
+Mark 'STEP 3/4 format, lint + types'
+& $vpy -m ruff format . *>&1 | Tee-Object -FilePath ..\logs\03_format_applied.log
+& $vpy -m ruff check --fix . *>&1 | Tee-Object -FilePath ..\logs\03_fix_applied.log
 & $vpy -m ruff check . *>&1 | Tee-Object -FilePath ..\logs\03_ruff.log
 Mark "ruff exit=$LASTEXITCODE"
 & $vpy -m ruff format --check . *>&1 | Tee-Object -FilePath ..\logs\03_ruff_format.log

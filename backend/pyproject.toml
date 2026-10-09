@@ -1,6 +1,6 @@
 [project]
 name = "dataviv-ai-os"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dataviv AI OS — legal AI operating system (Vault, Assistant, Workflows, Agents)"
 requires-python = ">=3.12"
 dependencies = [
@@ -14,6 +14,8 @@ dependencies = [
     "pyjwt>=2.8",
     "python-multipart>=0.0.9",
     "tqdm>=4.66",
+    "pypdf>=5.0",   # pure-Python PDF text extraction (works under Smart App Control)
+    "httpx>=0.27",  # OCR service client
 ]
 
 [project.optional-dependencies]
@@ -39,7 +41,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "ASYNC", "RUF"]
-ignore = ["S101", "B008"]   # assert in tests; FastAPI Depends() in defaults
+ignore = ["S101", "B008", "E501"]   # assert in tests; FastAPI Depends(); line length is the formatter's job
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106"]

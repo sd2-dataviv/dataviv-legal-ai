@@ -15,3 +15,4 @@ dist/
 /check_requirements.*
 /requirements_report.txt
 /logs/
+/var/

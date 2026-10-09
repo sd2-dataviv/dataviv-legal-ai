@@ -24,7 +24,7 @@ def _run_script(name: str) -> None:
     """Run a multi-statement SQL file. asyncpg's prepared statements reject multiple commands,
     so the script goes through the driver's simple-query protocol on the same transaction."""
     raw = op.get_bind().connection.dbapi_connection.driver_connection  # type: ignore[union-attr]
-    await_only(raw.execute((SQL_DIR / name).read_text()))
+    await_only(raw.execute((SQL_DIR / name).read_text(encoding="utf-8")))
 
 
 def upgrade() -> None:

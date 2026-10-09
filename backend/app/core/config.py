@@ -32,6 +32,20 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # Vault (Step 1). Originals are stored content-addressed under storage_dir (ADR-010).
+    storage_dir: Path = Path(__file__).resolve().parents[3] / "var" / "storage"
+    max_upload_mb: int = 50
+    max_files_per_upload: int = 500
+    # Dataviv OCR service; unset = scanned pages are kept as "OCR pending" (document status "partial").
+    ocr_url: str | None = None
+    ocr_languages: str = "eng+hin"
+    ocr_timeout_seconds: float = 120.0
+
+    # Background worker (ADR-009). In dev the API runs one worker loop in-process; in production run
+    # `python -m app.worker` as its own service and set this to false.
+    run_worker_in_api: bool = True
+    worker_poll_seconds: float = 1.0
+
     @property
     def dev_auth_enabled(self) -> bool:
         return self.env in ("dev", "test")

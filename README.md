@@ -14,7 +14,8 @@ tenant-isolated, matter-permissioned, fully audited core.
 | Step | Module | State |
 |---|---|---|
 | 0 | Foundation: config, auth, tenancy (RLS), permissions, ethical walls, audit chain, matters API, CI, VS Code | **Done** |
-| 1 | Vault: upload, ingestion pipeline with progress, OCR, chunking, hybrid search | Next |
+| 1 | Vault: upload, background ingestion with progress, OCR adapter, classification, clause-aware chunking, keyword search ([details](docs/steps/step1-vault.md)) | **In test** |
+| 1c | Vault: semantic search (Qdrant + bge-m3), fused with keyword ranking | — |
 | 2 | Assistant + frontend | — |
 | 3 | Review tables + evaluation harness | — |
 | 4 | Workflows (Temporal, approvals, playbooks) | — |
@@ -48,6 +49,12 @@ make migrate seed  # schema + dev data and tokens
 make api           # http://localhost:8000/docs
 make check         # lint + types + tests
 ```
+
+## Try the Vault
+
+1. F5 to start the API (the background worker starts with it), open http://localhost:8000/docs, **Authorize** with the partner token.
+2. `GET /v1/matters` → copy a matter id → `POST /v1/matters/{id}/documents` and choose files.
+3. Poll `GET /v1/jobs/{job_id}` until `succeeded`, then `POST /v1/search` with `{"query": "termination notice"}`.
 
 ## How isolation works
 

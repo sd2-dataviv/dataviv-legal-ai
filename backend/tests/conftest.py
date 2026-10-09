@@ -1,10 +1,11 @@
-"""Test fixtures. Tests run against a REAL PostgreSQL 16 with RLS on (design §7).
+"""Test fixtures. Tests run against a REAL PostgreSQL (16+) with RLS on (design §7).
 
-Start one with `docker compose -f infra/docker-compose.yml up -d postgres`, then `pytest`.
-The schema is rebuilt from migrations/sql at the start of each test session.
+Windows: scripts\\windows\\setup_db.ps1 prepares it. macOS/Linux: `make up`.
+The schema is rebuilt from every migration in migrations/sql at the start of each test session.
 """
 
 import os
+import tempfile
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -17,6 +18,9 @@ os.environ.setdefault(
 os.environ.setdefault(
     "DATAVIV_DATABASE_OWNER_URL", "postgresql+asyncpg://dataviv:dataviv_dev_only@localhost:5432/dataviv_test"
 )
+os.environ.setdefault("DATAVIV_RUN_WORKER_IN_API", "false")  # tests run jobs explicitly via run_jobs()
+os.environ.setdefault("DATAVIV_STORAGE_DIR", tempfile.mkdtemp(prefix="dataviv-test-storage-"))
+os.environ.setdefault("DATAVIV_OCR_URL", "")
 
 import pytest
 import pytest_asyncio
@@ -28,6 +32,7 @@ from app.core.config import get_settings
 from app.core.security import Role, issue_dev_token
 from app.db.session import dispose_engine
 from app.main import create_app
+from app.worker import run_pending
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -75,8 +80,10 @@ async def run_script(engine: AsyncEngine, sql: str) -> None:
 @pytest.fixture(scope="session")
 async def owner_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(get_settings().database_owner_url)
-    await run_script(engine, (SQL_DIR / "0001_foundation_down.sql").read_text())
-    await run_script(engine, (SQL_DIR / "0001_foundation.sql").read_text())
+    downs = sorted(SQL_DIR.glob("*_down.sql"), reverse=True)
+    ups = sorted(p for p in SQL_DIR.glob("*.sql") if not p.name.endswith("_down.sql"))
+    for f in [*downs, *ups]:
+        await run_script(engine, f.read_text(encoding="utf-8"))
     yield engine
     await engine.dispose()
 
@@ -137,3 +144,9 @@ async def new_matter(client: AsyncClient, world: World) -> dict[str, object]:
     )
     assert r.status_code == 201, r.text
     return r.json()  # type: ignore[no-any-return]
+
+
+@pytest.fixture
+def run_jobs() -> object:
+    """Call `await run_jobs()` to process every queued background job (the worker loop is off in tests)."""
+    return run_pending

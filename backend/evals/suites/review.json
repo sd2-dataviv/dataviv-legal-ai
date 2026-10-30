@@ -1,0 +1,23 @@
+{
+  "name": "review",
+  "description": "Review-table extraction over three agreements: normalised values, quotes verified against passages",
+  "gates": {"cell_accuracy": 0.8, "verified_rate": 0.8},
+  "documents": ["spa_lotus_zenith.txt", "lease_deed_sector44.txt", "employment_priya_nair.txt"],
+  "columns": [
+    {"key": "date", "label": "Date", "question": "On what date was the agreement executed?", "answer_type": "date"},
+    {"key": "law", "label": "Governing law", "question": "Which law governs the agreement?", "answer_type": "text"},
+    {"key": "disputes", "label": "Disputes", "question": "How are disputes to be resolved?", "answer_type": "choice",
+     "choices": ["Arbitration", "Courts", "Mediation"]},
+    {"key": "money", "label": "Main amount", "question": "What is the main amount of money payable under the agreement (price, rent or salary)?",
+     "answer_type": "amount"},
+    {"key": "stamp", "label": "Stamp duty paid", "question": "Does the document state that stamp duty has been paid?", "answer_type": "yes_no"}
+  ],
+  "expected": {
+    "spa_lotus_zenith.txt": {"date": ["2026-03-01"], "law": ["India"], "disputes": ["Arbitration"], "money": ["125000000"],
+                              "stamp": ["no", null]},
+    "lease_deed_sector44.txt": {"date": ["2026-03-25", "2026-04-01"], "law": ["India"], "disputes": ["Courts"],
+                                 "money": ["240000"], "stamp": ["yes"]},
+    "employment_priya_nair.txt": {"date": ["2026-01-10"], "law": ["India"], "disputes": ["Courts"], "money": ["3600000"],
+                                   "stamp": ["no", null]}
+  }
+}

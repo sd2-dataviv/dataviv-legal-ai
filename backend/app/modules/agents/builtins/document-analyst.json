@@ -1,0 +1,10 @@
+{
+  "slug": "document-analyst",
+  "name": "Document analyst",
+  "description": "Subagent: answers questions about one document only.",
+  "subagent_only": true,
+  "instructions": "Answer the questions from this one document only. Read it with read_document (and search_documents for specific points). For each question give the answer with its citation, or say the document does not deal with it.",
+  "tools": ["read_document", "search_documents", "read_passage"],
+  "approval": {},
+  "budget": {"max_steps": 5, "max_cost_usd": 0.02}
+}

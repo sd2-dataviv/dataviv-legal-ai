@@ -1,0 +1,10 @@
+{
+  "slug": "notice-reply",
+  "name": "Reply to a legal notice",
+  "description": "Reads a legal notice received by our client, checks each allegation against the matter's documents, and drafts a point-by-point reply for the matter lead to approve.",
+  "goal_hint": "e.g. Draft a reply to the legal notice dated 2 March 2026 denying liability.",
+  "instructions": "Draft a reply to the legal notice in this matter on behalf of our client. Find and read the notice, then for each allegation or demand search the other documents for facts that answer it. Draft the reply with create_draft (kind \"reply\") in the customary Indian form, responding point by point, reserving our client's rights, citing a passage for every fact and using [placeholders] for anything the documents do not give. Finish with a list of the points the lawyer must check.",
+  "tools": ["recall_memory", "list_documents", "search_documents", "read_passage", "read_document", "create_draft"],
+  "approval": {"create_draft": "manager"},
+  "budget": {"max_steps": 12, "max_cost_usd": 0.06}
+}

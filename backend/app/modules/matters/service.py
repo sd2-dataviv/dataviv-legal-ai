@@ -11,7 +11,14 @@ from app.core.models import User
 from app.core.permissions import accessible_matter_ids, require_matter_access, require_matter_manager
 from app.core.security import Principal
 from app.modules.matters.models import EthicalWall, Matter, MatterMember
-from app.modules.matters.schemas import MatterCreate, MemberAdd, WallCreate
+from app.modules.matters.schemas import (
+    MatterCreate,
+    MatterPeople,
+    MemberAdd,
+    MemberDetail,
+    WallCreate,
+    WallOut,
+)
 
 CAN_OPEN_MATTERS = frozenset({"partner", "associate", "admin"})
 
@@ -84,3 +91,27 @@ async def create_wall(db: AsyncSession, p: Principal, matter_id: uuid.UUID, data
     )
     await audit.record(db, p, "matter.wall_create", "matter", matter_id, matter_id, data.model_dump())
     return wall
+
+
+async def matter_people(db: AsyncSession, p: Principal, matter_id: uuid.UUID) -> MatterPeople:
+    """Members and ethical walls of a matter. Any member may see who else is on it."""
+    await require_matter_access(db, p, matter_id)
+    members = await db.execute(
+        select(User.id, User.name, User.email, User.role, MatterMember.matter_role)
+        .join(MatterMember, MatterMember.user_id == User.id)
+        .where(MatterMember.matter_id == matter_id)
+        .order_by(User.name)
+    )
+    walls = await db.execute(
+        select(User.id, User.name, EthicalWall.reason, EthicalWall.created_at)
+        .join(EthicalWall, EthicalWall.user_id == User.id)
+        .where(EthicalWall.matter_id == matter_id)
+        .order_by(EthicalWall.created_at)
+    )
+    return MatterPeople(
+        members=[
+            MemberDetail(user_id=r[0], name=r[1], email=r[2], firm_role=r[3], matter_role=r[4])
+            for r in members
+        ],
+        walls=[WallOut(user_id=r[0], name=r[1], reason=r[2], created_at=r[3]) for r in walls],
+    )

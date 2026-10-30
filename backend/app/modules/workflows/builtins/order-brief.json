@@ -1,0 +1,25 @@
+{
+  "slug": "order-brief",
+  "name": "Order or judgment brief",
+  "description": "Pulls the court, case number, bench, outcome, directions and next date out of an order or judgment and writes a cited brief for the team.",
+  "inputs": [
+    {"key": "order", "label": "Order or judgment", "type": "document", "required": true}
+  ],
+  "steps": [
+    {"id": "facts", "type": "extract", "title": "Read the key details", "document": "{{inputs.order}}",
+     "fields": [
+       {"key": "court", "label": "Court", "question": "Which court or tribunal passed this order?"},
+       {"key": "case_number", "label": "Case number", "question": "What is the case number or CNR?"},
+       {"key": "date", "label": "Date", "question": "On what date was the order passed?", "answer_type": "date"},
+       {"key": "coram", "label": "Bench", "question": "Which judge or judges passed the order?"},
+       {"key": "parties", "label": "Parties", "question": "Who are the parties?"},
+       {"key": "outcome", "label": "Outcome", "question": "What did the court decide or order?"},
+       {"key": "directions", "label": "Directions", "question": "What directions or conditions did the court give?"},
+       {"key": "next_date", "label": "Next date", "question": "When is the matter listed next, if at all?", "answer_type": "date"}
+     ]},
+    {"id": "brief", "type": "llm", "task": "qa", "title": "Write the brief", "sources": ["facts"], "context": ["facts"],
+     "instructions": "Write a brief of this order for the client team: one short paragraph on what was decided, then a list of the directions and conditions, any deadlines or the next date, and what our team needs to do next."},
+    {"id": "deliver", "type": "output_document", "title": "Save the brief as a draft", "document_title": "Brief: {{steps.facts.document_title}}", "kind": "memo",
+     "from_step": "brief"}
+  ]
+}

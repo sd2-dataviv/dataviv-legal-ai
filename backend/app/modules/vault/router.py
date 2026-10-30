@@ -12,6 +12,7 @@ from app.modules.vault.schemas import (
     DocumentOut,
     SearchRequest,
     SearchResponse,
+    SearchStatus,
     UploadResult,
     VersionOut,
 )
@@ -46,11 +47,12 @@ async def list_documents(
 
 @router.get("/v1/documents/{document_id}", response_model=DocumentDetail)
 async def get_document(document_id: uuid.UUID, p: CurrentPrincipal, db: DB) -> DocumentDetail:
-    doc, versions, n = await service.document_detail(db, p, document_id)
+    doc, versions, n, semantic = await service.document_detail(db, p, document_id)
     return DocumentDetail(
         **DocumentOut.model_validate(doc).model_dump(),
         versions=[VersionOut.model_validate(v) for v in versions],
         chunk_count=n,
+        semantic_chunks=semantic,
     )
 
 
@@ -78,5 +80,14 @@ async def delete_document(document_id: uuid.UUID, p: CurrentPrincipal, db: DB) -
 
 @router.post("/v1/search", response_model=SearchResponse)
 async def search(body: SearchRequest, p: CurrentPrincipal, db: DB) -> SearchResponse:
-    """Keyword search over every matter you can access (or a subset), ranked, with highlighted snippets."""
-    return SearchResponse(query=body.query, hits=await service.search(db, p, body))
+    """Search every matter you can access (or a subset) by words and by meaning, with highlighted snippets.
+
+    Each hit says how it matched (`keyword`, `semantic` or `both`). If semantic search is down, results
+    are keyword matches and `notice` says so."""
+    return await service.search(db, p, body)
+
+
+@router.get("/v1/search/status", response_model=SearchStatus)
+async def search_status(p: CurrentPrincipal, db: DB) -> SearchStatus:
+    """Is semantic search on and reachable, which model, and how many of your firm's passages wait to be embedded."""
+    return await service.search_status(db, p)

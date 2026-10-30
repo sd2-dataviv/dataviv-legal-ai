@@ -25,7 +25,9 @@ This Share Purchase Agreement is made on 1 March 2026 between Lotus Holdings Pri
 
 
 def test_pdf_pages_and_ocr_flag() -> None:
-    pdf = make_pdf([["IN THE HIGH COURT OF DELHI AT NEW DELHI", "ORDER", "Bail is granted to the petitioner."], []])
+    pdf = make_pdf(
+        [["IN THE HIGH COURT OF DELHI AT NEW DELHI", "ORDER", "Bail is granted to the petitioner."], []]
+    )
     pages = extract(pdf, mime_for("order.pdf"))
     assert [p.number for p in pages] == [1, 2]
     assert "HIGH COURT" in pages[0].text and not pages[0].needs_ocr
@@ -93,7 +95,10 @@ def test_long_paragraph_is_split_under_limit() -> None:
 
 
 def test_page_ranges_carry_through() -> None:
-    pages = [Page(1, "1. Facts\nThe accused was arrested on 1 Jan."), Page(2, "2. Grounds\nThe arrest was illegal.")]
+    pages = [
+        Page(1, "1. Facts\nThe accused was arrested on 1 Jan."),
+        Page(2, "2. Grounds\nThe arrest was illegal."),
+    ]
     chunks = chunk_pages(pages, max_chars=1200, min_chars=10)
     assert {(c.page_from, c.page_to) for c in chunks} <= {(1, 1), (2, 2), (1, 2)}
     assert min(c.page_from for c in chunks) == 1 and max(c.page_to for c in chunks) == 2

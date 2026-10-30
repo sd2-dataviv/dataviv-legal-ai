@@ -13,7 +13,7 @@ import zipfile
 from dataclasses import dataclass
 from email.message import EmailMessage
 from pathlib import PurePath
-from xml.etree import ElementTree as ET  # noqa: S405 - parsing DOCX XML from our own uploads; no DTDs
+from xml.etree import ElementTree as ET
 
 MIN_TEXT_CHARS = 25
 
@@ -66,7 +66,7 @@ def extract(data: bytes, mime: str) -> list[Page]:
 
 
 def _normalise(text: str) -> str:
-    text = text.replace("\r\n", "\n").replace("\r", "\n").replace(" ", " ")
+    text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
@@ -102,13 +102,13 @@ def _pdf(data: bytes) -> list[Page]:
     if reader.is_encrypted:
         try:
             reader.decrypt("")
-        except Exception as exc:  # noqa: BLE001 - surface any decryption failure the same way
+        except Exception as exc:
             raise UnsupportedFile("PDF is password-protected") from exc
     pages: list[Page] = []
     for i, page in enumerate(reader.pages):
         try:
             text = page.extract_text() or ""
-        except Exception:  # noqa: BLE001 - one bad page must not fail the document
+        except Exception:
             text = ""
         pages.append(_page(i + 1, text))
     return pages or [Page(1, "", needs_ocr=True)]

@@ -13,19 +13,27 @@ RunJobs = Callable[[], Awaitable[int]]
 
 ORDER_PDF = make_pdf(
     [
-        ["IN THE HIGH COURT OF DELHI AT NEW DELHI", "BAIL APPLN. 1234/2026", "CORAM: HON'BLE MR. JUSTICE A. KUMAR"],
+        [
+            "IN THE HIGH COURT OF DELHI AT NEW DELHI",
+            "BAIL APPLN. 1234/2026",
+            "CORAM: HON'BLE MR. JUSTICE A. KUMAR",
+        ],
         [],  # scan-like page: waits for OCR
         ["ORDER", "12. The applicant is admitted to regular bail on furnishing a personal bond."],
     ]
 )
-NOTICE_DOCX = make_docx(["LEGAL NOTICE", "Take notice that my client demands payment of Rs. 5,00,000 within 15 days."])
+NOTICE_DOCX = make_docx(
+    ["LEGAL NOTICE", "Take notice that my client demands payment of Rs. 5,00,000 within 15 days."]
+)
 SPA_TXT = (
-    "SHARE PURCHASE AGREEMENT\n\nThis Agreement is made between Lotus Holdings and Zenith LLP.\n\n"
-    "12. TERMINATION\n12.1 Either party may terminate this Agreement by giving thirty days written notice.\n"
-).encode()
+    b"SHARE PURCHASE AGREEMENT\n\nThis Agreement is made between Lotus Holdings and Zenith LLP.\n\n"
+    b"12. TERMINATION\n12.1 Either party may terminate this Agreement by giving thirty days written notice.\n"
+)
 
 
-async def upload(client: AsyncClient, matter_id: str, headers: dict[str, str], *files: tuple[str, bytes]) -> Any:
+async def upload(
+    client: AsyncClient, matter_id: str, headers: dict[str, str], *files: tuple[str, bytes]
+) -> Any:
     r = await client.post(
         f"/v1/matters/{matter_id}/documents",
         files=[("files", (name, data, "application/octet-stream")) for name, data in files],
@@ -45,7 +53,9 @@ async def test_upload_ingest_progress_and_search(
     client: AsyncClient, world: World, new_matter: dict[str, Any], run_jobs: RunJobs
 ) -> None:
     mid, h = new_matter["id"], world.partner_a.headers
-    res = await upload(client, mid, h, ("bail-order.pdf", ORDER_PDF), ("notice.docx", NOTICE_DOCX), ("spa.txt", SPA_TXT))
+    res = await upload(
+        client, mid, h, ("bail-order.pdf", ORDER_PDF), ("notice.docx", NOTICE_DOCX), ("spa.txt", SPA_TXT)
+    )
     assert [f["status"] for f in res["files"]] == ["queued", "queued", "queued"]
 
     job = (await client.get(f"/v1/jobs/{res['job_id']}", headers=h)).json()
@@ -57,7 +67,9 @@ async def test_upload_ingest_progress_and_search(
 
     docs = {d["title"]: d for d in (await client.get(f"/v1/matters/{mid}/documents", headers=h)).json()}
     assert docs["bail-order.pdf"]["doc_type"] == "order"
-    assert docs["bail-order.pdf"]["status"] == "partial" and docs["bail-order.pdf"]["ocr_pending_pages"] == [2]
+    assert docs["bail-order.pdf"]["status"] == "partial" and docs["bail-order.pdf"]["ocr_pending_pages"] == [
+        2
+    ]
     assert docs["bail-order.pdf"]["page_count"] == 3
     assert docs["notice.docx"]["doc_type"] == "notice" and docs["notice.docx"]["status"] == "indexed"
     assert docs["spa.txt"]["doc_type"] == "agreement"
@@ -77,14 +89,20 @@ async def test_search_respects_membership_walls_and_firms(
     client: AsyncClient, world: World, new_matter: dict[str, Any], run_jobs: RunJobs
 ) -> None:
     mid = new_matter["id"]
-    await upload(client, mid, world.partner_a.headers, ("walled-secret.txt", b"Project Kestrel merger term sheet."))
+    await upload(
+        client, mid, world.partner_a.headers, ("walled-secret.txt", b"Project Kestrel merger term sheet.")
+    )
     await run_jobs()
     assert await search(client, world.partner_a.headers, "Kestrel")
     assert await search(client, world.associate_a.headers, "Kestrel") == []  # same firm, not a member
     assert await search(client, world.partner_b.headers, "Kestrel") == []  # other firm
     assert await search(client, world.admin_a.headers, "Kestrel") == []  # admins get no implicit access
 
-    await client.post(f"/v1/matters/{mid}/members", json={"user_id": str(world.associate_a.id)}, headers=world.partner_a.headers)
+    await client.post(
+        f"/v1/matters/{mid}/members",
+        json={"user_id": str(world.associate_a.id)},
+        headers=world.partner_a.headers,
+    )
     assert await search(client, world.associate_a.headers, "Kestrel")
     await client.post(
         f"/v1/matters/{mid}/walls",
@@ -100,7 +118,9 @@ async def test_duplicate_and_new_version(
     mid, h = new_matter["id"], world.partner_a.headers
     first = await upload(client, mid, h, ("draft.txt", b"Version one mentions the Gurugram premises."))
     await run_jobs()
-    again = await upload(client, mid, h, ("copy-of-draft.txt", b"Version one mentions the Gurugram premises."))
+    again = await upload(
+        client, mid, h, ("copy-of-draft.txt", b"Version one mentions the Gurugram premises.")
+    )
     assert again["files"][0]["status"] == "duplicate" and again["job_id"] is None
     assert again["files"][0]["document_id"] == first["files"][0]["document_id"]
 
@@ -123,12 +143,18 @@ async def test_citation_download_and_delete(
     hit = (await search(client, h, "thirty days", matter_ids=[mid]))[0]
 
     chunk = (await client.get(f"/v1/documents/{doc_id}/chunks/{hit['chunk_id']}", headers=h)).json()
-    assert "thirty days" in chunk["text"] and chunk["page_from"] == 1 and chunk["char_end"] > chunk["char_start"]
-    assert (await client.get(f"/v1/documents/{doc_id}/chunks/{hit['chunk_id']}", headers=world.partner_b.headers)).status_code == 404
+    assert (
+        "thirty days" in chunk["text"] and chunk["page_from"] == 1 and chunk["char_end"] > chunk["char_start"]
+    )
+    assert (
+        await client.get(f"/v1/documents/{doc_id}/chunks/{hit['chunk_id']}", headers=world.partner_b.headers)
+    ).status_code == 404
 
     dl = await client.get(f"/v1/documents/{doc_id}/download", headers=h)
     assert dl.status_code == 200 and dl.content == SPA_TXT and "spa.txt" in dl.headers["content-disposition"]
-    assert (await client.get(f"/v1/documents/{doc_id}/download", headers=world.associate_a.headers)).status_code == 404
+    assert (
+        await client.get(f"/v1/documents/{doc_id}/download", headers=world.associate_a.headers)
+    ).status_code == 404
 
     assert (await client.delete(f"/v1/documents/{doc_id}", headers=h)).status_code == 204
     assert await search(client, h, "thirty days", matter_ids=[mid]) == []
@@ -148,11 +174,15 @@ async def test_rejections_and_viewer_cannot_upload(
         headers=h,
     )
     r = await client.post(
-        f"/v1/matters/{mid}/documents", files=[("files", ("x.txt", b"x", "text/plain"))], headers=world.paralegal_a.headers
+        f"/v1/matters/{mid}/documents",
+        files=[("files", ("x.txt", b"x", "text/plain"))],
+        headers=world.paralegal_a.headers,
     )
     assert r.status_code == 403
     r = await client.post(
-        f"/v1/matters/{mid}/documents", files=[("files", ("x.txt", b"x", "text/plain"))], headers=world.partner_b.headers
+        f"/v1/matters/{mid}/documents",
+        files=[("files", ("x.txt", b"x", "text/plain"))],
+        headers=world.partner_b.headers,
     )
     assert r.status_code == 404  # other firm: the matter does not exist for them
 
@@ -172,10 +202,14 @@ async def test_worker_handles_several_firms(
     client: AsyncClient, world: World, new_matter: dict[str, Any], run_jobs: RunJobs
 ) -> None:
     rb = await client.post(
-        "/v1/matters", json={"title": "Mehta v Union", "client_name": "Mehta"}, headers=world.partner_b.headers
+        "/v1/matters",
+        json={"title": "Mehta v Union", "client_name": "Mehta"},
+        headers=world.partner_b.headers,
     )
     mid_b = rb.json()["id"]
-    await upload(client, new_matter["id"], world.partner_a.headers, ("a.txt", b"Firm A only: Saffron clause."))
+    await upload(
+        client, new_matter["id"], world.partner_a.headers, ("a.txt", b"Firm A only: Saffron clause.")
+    )
     await upload(client, mid_b, world.partner_b.headers, ("b.txt", b"Firm B only: Indigo clause."))
     assert await run_jobs() >= 2
     assert await search(client, world.partner_b.headers, "Indigo")

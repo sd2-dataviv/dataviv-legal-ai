@@ -34,7 +34,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - name: Prepare database roles
-        run: psql -h localhost -U dataviv -d dataviv -f ../infra/postgres/init.sql
+        run: psql -h localhost -U dataviv -d dataviv -f ../docker/postgres/init.sql
       - name: Install
         run: pip install -e ".[dev]"
       - name: Lint

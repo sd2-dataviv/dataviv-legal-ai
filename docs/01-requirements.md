@@ -76,6 +76,26 @@ Priority: **M** = must (MVP), **S** = should, **C** = could.
 | AST-09 | Export answer/draft to DOCX | S |
 | AST-10 | Thread history searchable; threads belong to matter and inherit its permissions | M |
 
+### 3.3a Drafts (DRF) — added 9 October 2026 at the product owner's request
+
+| ID | Requirement | Priority |
+|---|---|---|
+| DRF-01 | Any Assistant answer (or a blank page) can be opened as a draft owned by the matter; members with edit rights can change its text, title and type | M |
+| DRF-02 | Every save creates a new, immutable, numbered version with author, time and an optional note; any version can be viewed, compared word by word with another, or restored as a new version | M |
+| DRF-03 | Concurrent edits never overwrite each other: a save based on an older version is refused with who saved since, and the editor can compare, then save on top or reload | M |
+| DRF-04 | Approval: an editor asks a lead or partner on the matter (not themselves) to approve the current version; editing is locked while waiting; the approver approves or requests changes with a note; the approved version is recorded and stays on record after later edits | M |
+| DRF-05 | Collaboration: everyone on the matter (viewers included) sees drafts, comments with an optional quoted passage, resolves comments, and sees who else has the draft open and whether they are editing | M |
+| DRF-06 | Drafts inherit matter permissions (walls, other firms → 404); every action is audited and shown as the draft's activity | M |
+| DRF-07 | Export any version to Word, stamped approved (by whom, when) or not approved | S |
+| DRF-08 | Live co-editing: several members of the firm on the matter type into the same draft at once and see each other's changes and cursors in real time; viewers watch read-only *(added 15 October 2026)* | M |
+| DRF-09 | Saving the shared copy creates a version that credits everyone whose changes it contains | M |
+| DRF-10 | AI suggestions: an editor prompts the Assistant to change the selected text or the whole draft, optionally grounded in the matter's documents; the change is shown to everyone as a redline with sources and warnings and is applied only when an editor accepts it | M |
+| DRF-11 | Asking for approval saves and locks the shared copy for everyone; the lead or partner approves exactly that version | M |
+| DRF-12 | A matter lead or partner sends a draft's approved version for e-signature (DocuSign) to one or more signers in a set order *(added 19 October 2026)* | M |
+| DRF-13 | Everyone on the matter sees each signer's status (sent, opened, signed, declined) as it changes; envelopes can be voided with a reason | M |
+| DRF-14 | When all have signed, the signed PDF and the certificate of completion are stored in the matter's Vault, searchable, and the signing is audited | M |
+| DRF-15 | Sending requires confirming the document is not excluded from e-signature by the IT Act 2000 (First Schedule) | M |
+
 ### 3.4 Workflows (WFL)
 
 | ID | Requirement | Pri |

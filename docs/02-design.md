@@ -114,9 +114,9 @@ Qdrant collection `chunks` per deployment, point payload: `firm_id, matter_id, d
 | POST /v1/search | hybrid search with filters | VLT-08 |
 | POST /v1/review-tables · POST …/{id}/run · GET …/{id} | review table | VLT-09 |
 | POST /v1/threads · POST /v1/threads/{id}/messages (SSE) | Assistant | AST-01..06 |
-| GET /v1/workflows · POST /v1/workflows/{slug}/runs · GET /v1/workflow-runs/{id} | workflows | WFL |
+| GET /v1/workflows · POST /v1/matters/{id}/workflow-runs · GET /v1/workflow-runs/{id} | workflows | WFL |
 | POST /v1/approvals/{id}/decision | approve / reject | WFL-04, AGT-03 |
-| POST /v1/agents/{id}/runs · GET /v1/agent-runs/{id} | agents | AGT |
+| GET /v1/agents · POST /v1/matters/{id}/agent-runs · GET /v1/agent-runs/{id} · /v1/matters/{id}/memory | agents, matter memory | AGT |
 | GET /v1/jobs/{id} | progress | NFR-09 |
 
 Errors follow RFC 9457 problem+json. A matter the user cannot access returns **404, not 403**, so existence is not leaked.
@@ -138,11 +138,11 @@ Errors follow RFC 9457 problem+json. A matter the user cannot access returns **4
 
 ### 6.3 Workflow with approval (WFL-03, 04)
 
-Temporal workflow executes steps from the spec; an `approval` step creates an `approvals` row and waits on a signal. `POST /approvals/{id}/decision` sends the signal. The run survives worker restarts.
+The worker advances the run one step per job, committing each step's output with its status (ADR-017); an `approval` step creates an `approvals` row and ends the job. `POST /approvals/{id}/decision` marks the step done and queues a new job (or, on reject, stops the run). The run survives worker restarts.
 
 ### 6.4 Agent loop (AGT-02..04)
 
-`while steps < budget and cost < budget`: model proposes tool call(s) → runtime validates arguments against the Pydantic schema → permission check as starting user → read tools execute; write tools create an approval and pause → observation appended → repeat until `final_answer`. Every step persisted to `agent_steps`.
+`while steps < budget and cost < budget`: model proposes one tool call as strict JSON (ADR-018) → runtime validates arguments against the Pydantic schema → permission check as starting user → read tools execute; write tools create an approval and pause → observation appended → repeat until `final_answer`. Every step persisted to `agent_steps`.
 
 ## 7. Testing strategy
 
@@ -164,10 +164,13 @@ Delivery steps for this build:
 |---|---|---|
 | 0 | Scaffold: config, tenancy, RLS, permissions, audit, matters API, CI, VS Code | FND-01..05 |
 | 1 | Vault: upload, ingestion pipeline with progress, chunking, search | VLT-01..08, 11 |
+| 1c | Semantic search: embedding gateway, Qdrant with mandatory ACL filter, hybrid fusion (ADR-019) | VLT-08 |
 | 2 | Assistant: threads, retrieval, streamed cited answers, verifier; frontend | AST-01..04, 06, 10 |
+| 2c | Live drafts: Yjs rooms over WebSocket, contributor-credited versions, AI suggestions, approval lock (ADR-020) | DRF-08..11 |
+| 2e | E-signature: approved version to DocuSign (JWT grant), signer tracking by Connect/sweep, signed copy into the Vault (ADR-021) | DRF-12..15 |
 | 3 | Vault review tables + eval harness | VLT-09, NFR-03 |
-| 4 | Workflows: spec engine, Temporal runs, approvals, 3 built-ins | WFL-01..05, 07 |
-| 5 | Agents: tool registry, runtime loop, budgets, approvals, memory | AGT-01..07 |
+| 4 | Workflows: spec engine, durable runs (ADR-017), approvals, playbooks, 3 built-ins | WFL-01..05, 07 |
+| 5 | Agents: tool registry, runtime loop, budgets, approvals, memory, subagents (ADR-018) | AGT-01..07 |
 
 ## 9. Architecture decision records
 

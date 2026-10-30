@@ -46,3 +46,23 @@ class MemberOut(BaseModel):
 class WallCreate(BaseModel):
     user_id: uuid.UUID
     reason: str = Field(min_length=5)
+
+
+class MemberDetail(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    email: str
+    firm_role: str
+    matter_role: MatterRole
+
+
+class WallOut(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    reason: str
+    created_at: datetime
+
+
+class MatterPeople(BaseModel):
+    members: list[MemberDetail]
+    walls: list[WallOut]

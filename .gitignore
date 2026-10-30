@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-windows/
 .env
 *.egg-info/
 .pytest_cache/
@@ -16,3 +17,5 @@ dist/
 /requirements_report.txt
 /logs/
 /var/
+*.key
+*.pem

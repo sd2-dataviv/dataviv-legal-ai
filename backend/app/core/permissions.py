@@ -16,6 +16,8 @@ from app.modules.matters.models import EthicalWall, MatterMember
 
 # Matter roles that may manage membership and approve gated actions
 MANAGER_ROLES = frozenset({"lead", "partner"})
+# Matter roles that may change matter work product (drafts, review tables); viewers only read and comment
+EDIT_ROLES = frozenset({"lead", "partner", "member"})
 
 
 async def accessible_matter_ids(db: AsyncSession, principal: Principal) -> set[uuid.UUID]:
@@ -31,16 +33,19 @@ async def accessible_matter_ids(db: AsyncSession, principal: Principal) -> set[u
 
 async def matter_role(db: AsyncSession, principal: Principal, matter_id: uuid.UUID) -> str | None:
     """The principal's role on a matter, or None if not a member or walled."""
+    return await user_matter_role(db, principal.user_id, matter_id)
+
+
+async def user_matter_role(db: AsyncSession, user_id: uuid.UUID, matter_id: uuid.UUID) -> str | None:
+    """Any user's role on a matter (e.g. a chosen approver), or None if not a member or walled."""
     walled = await db.scalar(
-        select(EthicalWall.id).where(
-            EthicalWall.user_id == principal.user_id, EthicalWall.matter_id == matter_id
-        )
+        select(EthicalWall.id).where(EthicalWall.user_id == user_id, EthicalWall.matter_id == matter_id)
     )
     if walled:
         return None
     return await db.scalar(
         select(MatterMember.matter_role).where(
-            MatterMember.user_id == principal.user_id, MatterMember.matter_id == matter_id
+            MatterMember.user_id == user_id, MatterMember.matter_id == matter_id
         )
     )
 

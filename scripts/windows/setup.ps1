@@ -5,8 +5,8 @@
 $ErrorActionPreference = 'Continue'   # native tools write notices to stderr; failures are checked via exit codes
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
-$steps = 7; $n = 0
-function Step($msg) { $script:n++; Write-Progress -Activity 'Dataviv AI OS setup' -Status $msg -PercentComplete (100 * $script:n / $steps); Write-Host "`n[$script:n/$steps] $msg" -ForegroundColor Cyan }
+$steps = 8; $n = 0
+function Step($msg) { $script:n++; Write-Progress -Activity 'Dataviv AI OS setup' -Status $msg -PercentComplete ([Math]::Min(100, 100 * $script:n / $steps)); Write-Host "`n[$script:n/$steps] $msg" -ForegroundColor Cyan }
 
 Step 'Checking Python (3.12 or newer)'
 $py = (Get-Command python -ErrorAction SilentlyContinue).Source
@@ -51,6 +51,26 @@ print('\n'.join(bad) if bad else 'ALL OK')"
 
 Step 'Creating backend\.env from .env.example'
 if (-not (Test-Path 'backend\.env')) { Copy-Item 'backend\.env.example' 'backend\.env'; Write-Host '  created backend\.env' } else { Write-Host '  backend\.env already exists - left unchanged' }
+
+Step 'Model provider (Groq)'
+# Switches the gateway to Groq when backend\.env holds a GROQ_API_KEY. The key itself is never printed.
+$envPath = Join-Path $root 'backend\.env'
+$envLines = @(Get-Content $envPath)
+if ($envLines | Where-Object { $_ -match '^\s*(DATAVIV_)?GROQ_API_KEY\s*=\s*\S+' }) {
+  if ($envLines | Where-Object { $_ -match '^\s*DATAVIV_LLM_BACKEND\s*=' }) {
+    $updated = @($envLines -replace '^\s*DATAVIV_LLM_BACKEND\s*=.*$', 'DATAVIV_LLM_BACKEND=groq')
+  } else {
+    $updated = $envLines + 'DATAVIV_LLM_BACKEND=groq'
+  }
+  if (($updated -join "`n") -ne ($envLines -join "`n")) {
+    [System.IO.File]::WriteAllLines($envPath, [string[]]$updated)  # UTF-8 without BOM
+    Write-Host '  GROQ_API_KEY found (not shown): set DATAVIV_LLM_BACKEND=groq'
+  } else {
+    Write-Host '  Using Groq (GROQ_API_KEY found, not shown)'
+  }
+} else {
+  Write-Host '  No GROQ_API_KEY in backend\.env - the Assistant uses the offline test model'
+}
 
 Step 'Installing recommended VS Code extensions'
 if (Get-Command code -ErrorAction SilentlyContinue) {

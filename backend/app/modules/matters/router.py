@@ -4,7 +4,14 @@ from fastapi import APIRouter, status
 
 from app.api.deps import DB, CurrentPrincipal
 from app.modules.matters import service
-from app.modules.matters.schemas import MatterCreate, MatterOut, MemberAdd, MemberOut, WallCreate
+from app.modules.matters.schemas import (
+    MatterCreate,
+    MatterOut,
+    MatterPeople,
+    MemberAdd,
+    MemberOut,
+    WallCreate,
+)
 
 router = APIRouter(prefix="/v1/matters", tags=["matters"])
 
@@ -30,6 +37,12 @@ async def list_matters(p: CurrentPrincipal, db: DB) -> list[MatterOut]:
 async def get_matter(matter_id: uuid.UUID, p: CurrentPrincipal, db: DB) -> MatterOut:
     matter, role = await service.get_matter(db, p, matter_id)
     return _out(matter, role)
+
+
+@router.get("/{matter_id}/people", response_model=MatterPeople)
+async def matter_people(matter_id: uuid.UUID, p: CurrentPrincipal, db: DB) -> MatterPeople:
+    """Members (with names and roles) and ethical walls on this matter."""
+    return await service.matter_people(db, p, matter_id)
 
 
 @router.post("/{matter_id}/members", response_model=MemberOut, status_code=status.HTTP_201_CREATED)

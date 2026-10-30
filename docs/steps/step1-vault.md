@@ -1,6 +1,6 @@
 # Step 1 — Vault (ingestion, chunking, search)
 
-**Implements:** VLT-01..06, VLT-07, VLT-08 (keyword part), VLT-11, NFR-09 · **Status:** in build, 9 October 2026
+**Implements:** VLT-01..06, VLT-07, VLT-08 (keyword part), VLT-11, NFR-09 · **Status:** done, 9 October 2026 — 47/47 tests passing on Windows 11 + PostgreSQL 18
 
 ## Scope
 

@@ -43,10 +43,7 @@ class OcrClient:
 
     @staticmethod
     def _parse(body: dict[str, Any]) -> list[OcrPage]:
-        return [
-            OcrPage(int(p["page"]), str(p.get("text", "")), p.get("confidence"))
-            for p in body["pages"]
-        ]
+        return [OcrPage(int(p["page"]), str(p.get("text", "")), p.get("confidence")) for p in body["pages"]]
 
 
 def get_ocr_client() -> OcrClient | None:

@@ -23,7 +23,10 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("affidavit", re.compile(r"\baffidavit\b|\bsolemnly affirm|\bdeponent\b", re.I)),
     ("written_statement", re.compile(r"\bwritten statement\b|\breply on behalf of (the )?respondent", re.I)),
     ("judgment", re.compile(r"\bjudgment\b|\bjudgement\b|\bj\s*u\s*d\s*g\s*m\s*e\s*n\s*t\b", re.I)),
-    ("order", re.compile(r"\border\b.{0,40}\b(dated|passed)\b|^\s*order\s*$|\bcoram\b|\bpresent\s*:", re.I | re.M)),
+    (
+        "order",
+        re.compile(r"\border\b.{0,40}\b(dated|passed)\b|^\s*order\s*$|\bcoram\b|\bpresent\s*:", re.I | re.M),
+    ),
     (
         "petition",
         re.compile(
@@ -32,7 +35,10 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
-    ("notice", re.compile(r"\blegal notice\b|\bnotice under section\b|\btake notice\b|\bnotice is hereby\b", re.I)),
+    (
+        "notice",
+        re.compile(r"\blegal notice\b|\bnotice under section\b|\btake notice\b|\bnotice is hereby\b", re.I),
+    ),
     (
         "agreement",
         re.compile(

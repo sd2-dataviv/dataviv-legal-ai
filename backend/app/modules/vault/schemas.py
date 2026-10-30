@@ -52,6 +52,9 @@ class VersionOut(BaseModel):
 class DocumentDetail(DocumentOut):
     versions: list[VersionOut]
     chunk_count: int
+    semantic_chunks: int | None = Field(
+        default=None, description="Passages findable by meaning; null when semantic search is off"
+    )
 
 
 class ChunkOut(BaseModel):
@@ -70,11 +73,20 @@ class ChunkOut(BaseModel):
     ocr_confidence: float | None
 
 
+SearchMode = Literal["hybrid", "keyword", "semantic"]
+Match = Literal["keyword", "semantic", "both"]
+
+
 class SearchRequest(BaseModel):
     query: str = Field(min_length=2, max_length=500)
     matter_ids: list[uuid.UUID] | None = None
     doc_types: list[str] | None = None
     limit: int = Field(default=10, ge=1, le=50)
+    mode: SearchMode = Field(
+        default="hybrid",
+        description="hybrid = words and meaning (default); keyword = exact words only; semantic = meaning only. "
+        "Without semantic search configured, every mode returns keyword matches.",
+    )
 
 
 class SearchHit(BaseModel):
@@ -87,9 +99,27 @@ class SearchHit(BaseModel):
     page_from: int
     page_to: int
     snippet: str
-    score: float
+    score: float = Field(description="Ranking score; compare hits within one response only")
+    match: Match = "keyword"
+    similarity: float | None = Field(
+        default=None, description="Cosine similarity to the query, if found by meaning"
+    )
 
 
 class SearchResponse(BaseModel):
     query: str
+    mode: SearchMode = "keyword"  # what actually ran
+    notice: str | None = None
     hits: list[SearchHit]
+
+
+class SearchStatus(BaseModel):
+    enabled: bool
+    embeddings_backend: str
+    vector_store: str
+    model: str | None
+    collection: str | None
+    reachable: bool | None
+    vectors: int | None = Field(description="Passages of your firm in the vector store")
+    pending_passages: int | None = Field(description="Passages of your firm not yet embedded with this model")
+    error: str | None

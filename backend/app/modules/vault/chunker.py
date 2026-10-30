@@ -113,7 +113,9 @@ def _split_long(u: _Unit, max_chars: int) -> list[_Unit]:
     return out
 
 
-def chunk_pages(pages: list[Page], max_chars: int = MAX_CHARS, min_chars: int = MIN_CHARS) -> list[ChunkDraft]:
+def chunk_pages(
+    pages: list[Page], max_chars: int = MAX_CHARS, min_chars: int = MIN_CHARS
+) -> list[ChunkDraft]:
     units: list[_Unit] = []
     for u in _units(pages):
         units.extend(_split_long(u, max_chars))

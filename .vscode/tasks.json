@@ -11,9 +11,24 @@
       "label": "1 · Database: start / prepare",
       "type": "shell",
       "command": "docker compose -f infra/docker-compose.yml up -d postgres",
+      "linux": {
+        "command": "bash scripts/linux/setup_db.sh"
+      },
       "windows": {
         "command": "powershell -ExecutionPolicy Bypass -File scripts/windows/setup_db.ps1"
       },
+      "problemMatcher": []
+    },
+    {
+      "label": "Qdrant: start (semantic search)",
+      "type": "shell",
+      "command": "bash scripts/linux/qdrant.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Semantic search: embed pending passages",
+      "type": "shell",
+      "command": "${command:python.interpreterPath} scripts/reindex_vectors.py",
       "problemMatcher": []
     },
     {
@@ -34,7 +49,7 @@
     {
       "label": "Run API",
       "type": "shell",
-      "command": "${command:python.interpreterPath} -m uvicorn app.main:app --reload --port 8000",
+      "command": "${command:python.interpreterPath} -m uvicorn app.main:app --reload --port 8010",
       "options": {
         "cwd": "${workspaceFolder}/backend"
       },

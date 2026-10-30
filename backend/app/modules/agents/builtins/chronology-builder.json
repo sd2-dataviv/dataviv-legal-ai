@@ -1,0 +1,10 @@
+{
+  "slug": "chronology-builder",
+  "name": "Chronology builder",
+  "description": "Reads the matter's documents in order, records every dated event in the matter memory, and drafts a cited chronology memo for approval.",
+  "goal_hint": "e.g. Build a chronology of the dispute from the agreement, the notices and the orders.",
+  "instructions": "Build a chronology of the matter. List the documents, read each relevant one in order, and record every dated event with remember_fact (kind \"event\", event_date as YYYY-MM-DD, the passage id as source). Then draft an internal memo with create_draft listing the events in date order, one per line, each cited. Finish with a short summary of the key dates and any gaps.",
+  "tools": ["recall_memory", "list_documents", "read_document", "search_documents", "remember_fact", "create_draft"],
+  "approval": {"remember_fact": "auto", "create_draft": "confirm"},
+  "budget": {"max_steps": 14, "max_cost_usd": 0.06}
+}

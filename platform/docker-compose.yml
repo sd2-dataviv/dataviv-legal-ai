@@ -1,0 +1,93 @@
+# Dataviv AI OS on the Workflow Platform (an APPLICATION: three parts, one screen).
+# This file is copied to the top of the upload zip by scripts/linux/platform_zip.sh.
+#
+#   web       the API, background worker and the console - what people open (port 8010)
+#   postgres  PostgreSQL 16 with row-level security (internal only, no published port)
+#   qdrant    vector store for search by meaning (internal only)
+#
+# Secrets are environment values, never files in the zip. Set them in the platform if it allows:
+#   GROQ_API_KEY (+ DATAVIV_LLM_BACKEND=groq) for real AI answers; without them the AI runs offline
+#   DATAVIV_JWT_SECRET, POSTGRES_PASSWORD, APP_DB_PASSWORD for anything beyond a demo.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["api"]
+    ports:
+      - "8010:8010"
+    environment:
+      DATAVIV_ENV: ${DATAVIV_ENV:-dev}            # dev = seeded demo firm and sign-in as any demo user
+      DATAVIV_PORT: "8010"
+      DATAVIV_DATABASE_URL: postgresql+asyncpg://app_user:${APP_DB_PASSWORD:-app_user_dev_only}@postgres:5432/dataviv
+      DATAVIV_DATABASE_OWNER_URL: postgresql+asyncpg://dataviv:${POSTGRES_PASSWORD:-dataviv_dev_only}@postgres:5432/dataviv
+      DATAVIV_JWT_SECRET: ${DATAVIV_JWT_SECRET:-change-me-dev-only-secret-32-bytes-min}
+      DATAVIV_SEED_ON_START: "true"
+      DATAVIV_BOOTSTRAP_APP_ROLE: "true"         # create app_user in the stock postgres image
+      DATAVIV_RUN_WORKER_IN_API: "true"
+      DATAVIV_STORAGE_DIR: /app/var/storage
+      DATAVIV_FORWARDED_ALLOW_IPS: "*"            # behind the platform's proxy
+      # AI model: offline "fake" until a Groq key is supplied
+      DATAVIV_LLM_BACKEND: ${DATAVIV_LLM_BACKEND:-fake}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      # Search by meaning: bge-m3 on CPU (downloaded once, about 2.2 GB) + Qdrant
+      DATAVIV_EMBEDDINGS_BACKEND: ${DATAVIV_EMBEDDINGS_BACKEND:-local}
+      DATAVIV_EMBEDDINGS_DEVICE: cpu
+      DATAVIV_VECTOR_STORE: qdrant
+      DATAVIV_QDRANT_URL: http://qdrant:6333
+      # E-signature: test mode until DocuSign settings are supplied (see docs/steps/step2e-esignature.md)
+      # Shared API (node.yaml api:): WorkflowHub sets WFH_APP_API_SECRET, WFH_APP_API_AUDIENCE and
+      # WFH_AUTH_SERVICE_URL itself when it starts the app. Callers act as the Dataviv user with the same
+      # e-mail; in dev only, a caller without one acts as this demo user (empty = refuse them).
+      DATAVIV_PLATFORM_FALLBACK_EMAIL: ${DATAVIV_PLATFORM_FALLBACK_EMAIL:-asha@sharma-associates.in}
+      DATAVIV_ESIGN_BACKEND: ${DATAVIV_ESIGN_BACKEND:-fake}
+      # Set these as platform environment values (and DATAVIV_ESIGN_BACKEND=docusign) to sign with DocuSign.
+      # The private key is the PEM text itself; "\n" escapes are accepted for one-line fields.
+      DATAVIV_DOCUSIGN_INTEGRATION_KEY: ${DATAVIV_DOCUSIGN_INTEGRATION_KEY:-}
+      DATAVIV_DOCUSIGN_USER_ID: ${DATAVIV_DOCUSIGN_USER_ID:-}
+      DATAVIV_DOCUSIGN_PRIVATE_KEY: ${DATAVIV_DOCUSIGN_PRIVATE_KEY:-}
+      DATAVIV_DOCUSIGN_ACCOUNT_ID: ${DATAVIV_DOCUSIGN_ACCOUNT_ID:-}
+      DATAVIV_DOCUSIGN_AUTH_SERVER: ${DATAVIV_DOCUSIGN_AUTH_SERVER:-account-d.docusign.com}
+    volumes:
+      - appdata:/app/var
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+    restart: unless-stopped
+
+  postgres:
+    # The stock image (the one WorkflowHub's own examples use): nothing to build. The web service creates the
+    # app_user role on first start (DATAVIV_BOOTSTRAP_APP_ROLE), so no init script is needed here.
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dataviv
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataviv_dev_only}
+      POSTGRES_DB: dataviv
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataviv -d dataviv"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.2
+    volumes:
+      - qdrant:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  appdata:
+  pgdata:
+  qdrant:

@@ -37,6 +37,23 @@ class Conflict(AppError):
     title = "Conflict"
 
 
+class Unprocessable(AppError):
+    status = 422
+    title = "Cannot process"
+
+
+class TooManyRequests(AppError):
+    status = 429
+    title = "Too many requests"
+
+
+class Unavailable(AppError):
+    """A dependency (e.g. the model provider) is not configured or not reachable."""
+
+    status = 503
+    title = "Service unavailable"
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle(request: Request, exc: AppError) -> JSONResponse:

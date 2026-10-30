@@ -1,0 +1,22 @@
+{
+  "slug": "legal-notice",
+  "name": "Legal notice",
+  "description": "Finds the facts in the matter's documents, drafts a legal notice in the customary Indian form, and asks the matter lead to approve it.",
+  "inputs": [
+    {"key": "recipient", "label": "Notice to (name and address)", "type": "text", "required": true},
+    {"key": "demand", "label": "What our client demands", "type": "textarea", "required": true},
+    {"key": "deadline_days", "label": "Days to comply", "type": "number", "required": true, "default": 15, "min": 1, "max": 90},
+    {"key": "documents", "label": "Supporting documents (none chosen = the whole matter)", "type": "documents", "required": false},
+    {"key": "facts", "label": "Anything else the draftsperson should know", "type": "textarea", "required": false}
+  ],
+  "steps": [
+    {"id": "facts", "type": "retrieve", "title": "Find the supporting facts", "query": "{{inputs.demand}} {{inputs.facts}}",
+     "documents": "{{inputs.documents}}", "limit": 6},
+    {"id": "notice", "type": "llm", "task": "draft", "kind": "notice", "title": "Draft the notice", "sources": ["facts"],
+     "instructions": "Draft a legal notice in the customary Indian form, on behalf of our client {{matter.client_name}}, addressed to {{inputs.recipient}}. The demand: {{inputs.demand}}. Allow {{inputs.deadline_days}} days to comply. Further facts from the lawyer: {{inputs.facts}}. Cite the documents for every fact you state, and use [placeholders] for anything they do not give."},
+    {"id": "sign_off", "type": "approval", "title": "Approval before sending", "role": "matter_manager", "show": ["notice"],
+     "message": "Please approve the legal notice to {{inputs.recipient}}."},
+    {"id": "deliver", "type": "output_document", "title": "Save the notice as a draft", "document_title": "Legal notice to {{inputs.recipient}}", "kind": "notice",
+     "from_step": "notice"}
+  ]
+}

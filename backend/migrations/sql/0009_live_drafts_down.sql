@@ -1,0 +1,3 @@
+ALTER TABLE IF EXISTS draft_versions DROP COLUMN IF EXISTS contributors;
+DROP TABLE IF EXISTS draft_suggestions CASCADE;
+DROP TABLE IF EXISTS draft_live CASCADE;

@@ -1,0 +1,21 @@
+{
+  "slug": "contract-review",
+  "name": "Contract review against a playbook",
+  "description": "Compares an agreement with your firm's playbook clause by clause, writes a memo on the gaps, and asks a partner to sign it off.",
+  "inputs": [
+    {"key": "agreement", "label": "Agreement", "type": "document", "required": true},
+    {"key": "playbook", "label": "Playbook", "type": "playbook", "required": true},
+    {"key": "our_side", "label": "We act for the", "type": "choice", "required": true, "default": "Buyer",
+     "choices": ["Buyer", "Seller", "Lessee", "Lessor", "Employer", "Employee", "Service provider", "Customer"]}
+  ],
+  "steps": [
+    {"id": "review", "type": "playbook_review", "title": "Compare the agreement with the playbook",
+     "document": "{{inputs.agreement}}", "playbook": "{{inputs.playbook}}", "side": "{{inputs.our_side}}"},
+    {"id": "memo", "type": "llm", "task": "draft", "kind": "memo", "title": "Write the review memo", "sources": ["review"], "context": ["review"],
+     "instructions": "Write an internal memo to the partner on {{steps.review.document_title}}. We act for the {{inputs.our_side}}. For each clause that is fallback, unacceptable or missing against the playbook, say what the agreement provides (cite it), why it matters to our client, and the change we should ask for. Finish with the three most important negotiation points as a numbered list."},
+    {"id": "sign_off", "type": "approval", "title": "Partner sign-off", "role": "matter_manager", "show": ["review", "memo"],
+     "message": "Please approve the playbook review of {{steps.review.document_title}}."},
+    {"id": "deliver", "type": "output_document", "title": "Save the memo as a draft", "document_title": "Contract review: {{steps.review.document_title}}", "kind": "memo",
+     "from_step": "memo"}
+  ]
+}

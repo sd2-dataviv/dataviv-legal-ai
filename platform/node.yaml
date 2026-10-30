@@ -1,0 +1,102 @@
+# Workflow Platform (WorkflowHub): this project is an APPLICATION (a screen people open), not a node.
+# No path and no inputs/outputs - that is what makes it an application. The Open button goes to the
+# "web" service on this port; "/" redirects to the console at /ui/.
+name: Dataviv AI OS
+key: dataviv_ai_os          # permanent identity: never change it (uploading the same key adds a new version)
+description: Legal AI workspace for Indian law firms - matters, document search, cited answers, drafts, approvals and e-signature.
+category: legal
+icon: scale
+
+entrypoint:
+  type: http
+  port: 8010
+
+# Shared API for other apps and AI agents (after upload: Sharing -> Agent access -> Expose to agents).
+# Each call runs as the person asking: the platform signs X-Wfh-User, and the app acts as the Dataviv user
+# with the same e-mail, in that user's firm (backend/app/core/platform.py). Paths are relative to base_path.
+api:
+  base_path: /v1
+  endpoints:
+    - key: whoami
+      method: GET
+      path: /me
+      description: The Dataviv user, firm and role the caller acts as.
+
+    - key: list_matters
+      method: GET
+      path: /matters
+      description: Matters the caller can access (title, client, forum, CNR, the caller's role).
+
+    - key: get_matter
+      method: GET
+      path: /matters/{matter_id}
+      description: One matter by id.
+
+    - key: list_documents
+      method: GET
+      path: /matters/{matter_id}/documents
+      description: Documents in a matter, with type and processing status.
+      params:
+        - {name: doc_type, type: text, required: false}
+        - {name: status, type: text, required: false}
+
+    - key: search_documents
+      method: POST
+      path: /search
+      description: Search the caller's matters by words and meaning; returns passages with their document and page.
+      params:
+        - {name: query, type: text, required: true}
+        - {name: mode, type: text, required: false}       # hybrid (default), keyword or semantic
+        - {name: limit, type: number, required: false}    # 1-50, default 10
+
+    - key: start_thread
+      method: POST
+      path: /matters/{matter_id}/threads
+      description: Start an Assistant conversation in a matter; returns its id for ask_assistant.
+      params:
+        - {name: title, type: text, required: false}
+
+    - key: ask_assistant
+      method: POST
+      path: /threads/{thread_id}/messages
+      description: Ask about the matter's documents; every sentence of the answer cites the passage it relies on.
+      params:
+        - {name: content, type: text, required: true}
+        - {name: mode, type: text, required: false}       # ask (default), summarise or draft
+        - {name: draft_kind, type: text, required: false} # notice, reply, email or memo (mode = draft)
+
+    - key: list_drafts
+      method: GET
+      path: /matters/{matter_id}/drafts
+      description: Drafts in a matter with status (editing, in review, approved) and version.
+
+    - key: get_draft
+      method: GET
+      path: /drafts/{draft_id}
+      description: One draft with its text, versions, review state and signature requests.
+
+    - key: create_draft
+      method: POST
+      path: /matters/{matter_id}/drafts
+      description: Create a draft in a matter (it then opens for live co-editing in the console).
+      params:
+        - {name: title, type: text, required: false}
+        - {name: kind, type: text, required: false}       # notice, reply, email, memo or other
+        - {name: content, type: text, required: false}
+
+    - key: drafts_awaiting_me
+      method: GET
+      path: /drafts/awaiting-me
+      description: Drafts waiting for the caller's review or approval.
+
+    - key: list_approvals
+      method: GET
+      path: /approvals
+      description: Workflow approvals; mine=true for those waiting on the caller.
+      params:
+        - {name: mine, type: text, required: false}
+
+    - key: signature_status
+      method: GET
+      path: /drafts/{draft_id}/signatures
+      description: E-signature requests for a draft and each signer's status.

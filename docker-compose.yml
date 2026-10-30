@@ -1,0 +1,86 @@
+# Dataviv AI OS - the whole stack in containers.
+#
+#   docker compose up -d --build        build and start: postgres, qdrant, api (+ in-process worker)
+#   docker compose logs -f api          follow the API
+#   docker compose down                 stop (data is kept in volumes; add -v to wipe it)
+#
+# Console: http://localhost:8080/ui/   API docs: http://localhost:8080/docs
+# Settings come from backend/.env (GROQ_API_KEY, DATAVIV_LLM_BACKEND, embeddings ...); the database and
+# Qdrant addresses below override the localhost ones in that file. See docs/docker.md.
+name: dataviv
+
+x-app: &app
+  image: dataviv-ai-os:${DATAVIV_IMAGE_TAG:-latest}
+  build:
+    context: .
+    args:
+      SEMANTIC: ${DATAVIV_SEMANTIC:-1}   # 0 = slim image without PyTorch
+  env_file:
+    - path: backend/.env
+      required: false
+  environment: &app-env
+    DATAVIV_DATABASE_URL: postgresql+asyncpg://app_user:${APP_DB_PASSWORD:-app_user_dev_only}@postgres:5432/dataviv
+    DATAVIV_DATABASE_OWNER_URL: postgresql+asyncpg://dataviv:${POSTGRES_PASSWORD:-dataviv_dev_only}@postgres:5432/dataviv
+    DATAVIV_QDRANT_URL: http://qdrant:6333
+    DATAVIV_STORAGE_DIR: /app/var/storage
+    # DocuSign key text: docker.sh fills this from DATAVIV_DOCUSIGN_PRIVATE_KEY_PATH in backend/.env (that
+    # path is on this machine, not in the container); empty = use the path / e-sign not configured
+    DATAVIV_DOCUSIGN_PRIVATE_KEY: ${DATAVIV_DOCUSIGN_PRIVATE_KEY:-}
+  volumes:
+    - appdata:/app/var            # document originals + the bge-m3 model cache
+  depends_on:
+    postgres: { condition: service_healthy }
+    qdrant: { condition: service_started }
+  restart: unless-stopped
+
+services:
+  postgres:
+    # postgres:16 plus docker/postgres/init.sql, which creates app_user (the API's role, so row-level
+    # security applies) and dataviv_test
+    image: dataviv-postgres:16
+    build: ./docker/postgres
+    environment:
+      POSTGRES_USER: dataviv               # schema owner: migrations and seeding
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataviv_dev_only}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-app_user_dev_only}   # read by docker/postgres/00-init.sh
+      POSTGRES_DB: dataviv
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataviv -d dataviv"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # Not published to the host (a native Postgres may already use 5432). To reach it, uncomment:
+    # ports: ["127.0.0.1:5433:5432"]
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.2
+    volumes:
+      - qdrant:/qdrant/storage
+    restart: unless-stopped
+
+  api:
+    <<: *app
+    command: ["api"]
+    environment:
+      <<: *app-env
+      DATAVIV_SEED_ON_START: ${DATAVIV_SEED_ON_START:-true}   # dev firm and users (dev/test only)
+      DATAVIV_RUN_WORKER_IN_API: ${DATAVIV_RUN_WORKER_IN_API:-true}
+    ports:
+      - "${DATAVIV_HTTP_PORT:-8080}:8010"
+
+  # Optional: jobs (ingest, review tables, workflows, agents) in their own container.
+  #   DATAVIV_RUN_WORKER_IN_API=false docker compose --profile worker up -d
+  worker:
+    <<: *app
+    command: ["worker"]
+    profiles: [worker]
+    healthcheck:
+      disable: true
+
+volumes:
+  pgdata:
+  qdrant:
+  appdata:

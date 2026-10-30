@@ -1,0 +1,11 @@
+{
+  "slug": "due-diligence",
+  "name": "Due diligence across documents",
+  "description": "Hands each document to its own subagent to answer the same diligence questions in parallel, then combines the findings into one cited report and records the red flags in the matter memory.",
+  "goal_hint": "e.g. For each agreement: parties, term, termination rights, change of control, liability cap, governing law.",
+  "instructions": "Run a due diligence review. List the documents, then call delegate_to_subagents once with the diligence questions and the ids of the documents to review (at most 8). Combine the subagents' findings into one report: a short overview, then each document's findings, then the red flags. Record each red flag with remember_fact (kind \"fact\"). Keep every citation the subagents gave.",
+  "tools": ["recall_memory", "list_documents", "delegate_to_subagents", "remember_fact"],
+  "approval": {"remember_fact": "auto"},
+  "subagent": "document-analyst",
+  "budget": {"max_steps": 8, "max_cost_usd": 0.12}
+}

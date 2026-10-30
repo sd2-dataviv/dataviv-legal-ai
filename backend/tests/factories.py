@@ -44,7 +44,9 @@ def make_pdf(pages: list[list[str]]) -> bytes:
     out.write(b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1))
     for off in offsets:
         out.write(b"%010d 00000 n \n" % off)
-    out.write(b"trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, catalog, xref))
+    out.write(
+        b"trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, catalog, xref)
+    )
     return out.getvalue()
 
 
@@ -59,7 +61,7 @@ def make_docx(paragraphs: list[str]) -> bytes:
             body.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
         else:
             esc = p.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            body.append(f"<w:p><w:r><w:t xml:space=\"preserve\">{esc}</w:t></w:r></w:p>")
+            body.append(f'<w:p><w:r><w:t xml:space="preserve">{esc}</w:t></w:r></w:p>')
     doc = f'<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="{_W}"><w:body>{"".join(body)}</w:body></w:document>'
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:

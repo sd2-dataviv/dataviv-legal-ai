@@ -1,0 +1,10 @@
+{
+  "slug": "matter-researcher",
+  "name": "Matter researcher",
+  "description": "Answers a research question about the matter by searching and reading its documents, and checks the matter memory first. Read-only.",
+  "goal_hint": "e.g. What notice period applies to termination, and has either side served notice?",
+  "instructions": "Research the lawyer's question in this matter's documents. Start with recall_memory, then search; read the full passage when a search snippet is not enough. Look for conflicting provisions and say if documents disagree. Answer precisely, with every fact cited.",
+  "tools": ["recall_memory", "list_documents", "search_documents", "read_passage", "read_document"],
+  "approval": {},
+  "budget": {"max_steps": 8, "max_cost_usd": 0.03}
+}

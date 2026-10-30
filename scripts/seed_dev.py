@@ -5,6 +5,7 @@ Uses the OWNER connection (bypasses RLS) — dev only.
 """
 
 import asyncio
+import json
 import sys
 import uuid
 from pathlib import Path
@@ -17,8 +18,10 @@ from tqdm import tqdm  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
 from app.core.security import issue_dev_token  # noqa: E402
+from app.modules.workflows.templates import PLAYBOOK_TEMPLATES  # noqa: E402
 
 FIRM_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+OTHER_FIRM_ID = uuid.UUID("00000000-0000-4000-8000-000000000002")  # for cross-firm isolation checks
 USERS = [
     ("partner", "Asha Sharma", "asha@sharma-associates.in"),
     ("associate", "Rohan Gupta", "rohan@sharma-associates.in"),
@@ -75,8 +78,45 @@ async def main() -> None:
                     ),
                     {"m": mid, "u": ids[role], "f": FIRM_ID, "r": mrole},
                 )
+        # The sample playbooks, so the contract-review workflow can be tried straight away (Step 4).
+        if not await conn.scalar(text("SELECT count(*) FROM playbooks WHERE firm_id = :f"), {"f": FIRM_ID}):
+            for t in PLAYBOOK_TEMPLATES:
+                await conn.execute(
+                    text(
+                        "INSERT INTO playbooks (firm_id, name, contract_type, description, clauses, created_by, "
+                        "updated_by) VALUES (:f, :n, :c, :d, CAST(:cl AS jsonb), :u, :u)"
+                    ),
+                    {"f": FIRM_ID, "n": t["name"], "c": t["contract_type"], "d": t["description"],
+                     "cl": json.dumps(t["clauses"]), "u": ids["partner"]},
+                )
+        # A second firm with one partner and one matter, to test that firms never see each other's data.
+        await conn.execute(
+            text("INSERT INTO firms (id, name) VALUES (:id, 'Mehta Legal LLP') ON CONFLICT DO NOTHING"),
+            {"id": OTHER_FIRM_ID},
+        )
+        other = await conn.scalar(
+            text(
+                "INSERT INTO users (firm_id, email, name, role) VALUES (:f, 'kavya@mehtalegal.in', 'Kavya Mehta', "
+                "'partner') ON CONFLICT (firm_id, email) DO UPDATE SET name = EXCLUDED.name RETURNING id"
+            ),
+            {"f": OTHER_FIRM_ID},
+        )
+        if not await conn.scalar(text("SELECT count(*) FROM matters WHERE firm_id = :f"), {"f": OTHER_FIRM_ID}):
+            mid = await conn.scalar(
+                text(
+                    "INSERT INTO matters (firm_id, title, client_name, forum, created_by) VALUES "
+                    "(:f, 'Mehta v. Union of India - writ petition', 'R. Mehta', 'Supreme Court of India', :u) "
+                    "RETURNING id"
+                ),
+                {"f": OTHER_FIRM_ID, "u": other},
+            )
+            await conn.execute(
+                text("INSERT INTO matter_members VALUES (:m, :u, :f, 'lead')"),
+                {"m": mid, "u": other, "f": OTHER_FIRM_ID},
+            )
+        tokens.append(("partner    kavya@mehtalegal.in (other firm)", issue_dev_token(other, OTHER_FIRM_ID, "partner", "kavya@mehtalegal.in")))
     await engine.dispose()
-    print("\nDev tokens (paste into Swagger 'Authorize' at http://localhost:8000/docs):\n")
+    print("\nDev tokens (paste into Swagger 'Authorize' at http://127.0.0.1:8010/docs):\n")
     for who, tok in tokens:
         print(f"{who}\n  {tok}\n")
 

@@ -1,0 +1,32 @@
+{
+  "name": "dataviv-console",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Dataviv AI OS test console: exercises the backend (matters, vault, search, permissions).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.14",
+    "lib0": "0.2.119",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "y-codemirror.next": "0.3.6",
+    "y-protocols": "1.0.7",
+    "y-websocket": "3.1.0",
+    "yjs": "13.6.33"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.23",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.5.2",
+    "typescript": "5.8.3",
+    "vite": "6.3.5"
+  }
+}

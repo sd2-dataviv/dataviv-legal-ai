@@ -61,3 +61,5 @@ class Chunk(TenantMixin, CreatedAtMixin, Base):
     char_end: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
     ocr_confidence: Mapped[float | None] = mapped_column(Float)
+    # Model whose vector of this passage is in the vector store (Step 1c); NULL = not embedded yet
+    embedding_model: Mapped[str | None] = mapped_column(Text)

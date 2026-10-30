@@ -21,6 +21,17 @@ os.environ.setdefault(
 os.environ.setdefault("DATAVIV_RUN_WORKER_IN_API", "false")  # tests run jobs explicitly via run_jobs()
 os.environ.setdefault("DATAVIV_STORAGE_DIR", tempfile.mkdtemp(prefix="dataviv-test-storage-"))
 os.environ.setdefault("DATAVIV_OCR_URL", "")
+# Never call a real model provider from tests, even when backend/.env has GROQ_API_KEY set.
+os.environ["DATAVIV_LLM_BACKEND"] = "fake"
+# Hybrid search on by default, offline: hashed-word embeddings in an in-process vector store, so every
+# suite exercises the semantic path. Run with DATAVIV_EMBEDDINGS_BACKEND=none to test keyword-only mode.
+os.environ.setdefault("DATAVIV_EMBEDDINGS_BACKEND", "fake")
+os.environ.setdefault("DATAVIV_VECTOR_STORE", "memory")
+os.environ["DATAVIV_ASSISTANT_VERIFIER"] = "lexical"
+# E-signature in offline test mode: never e-mail anyone from tests (the DocuSign client is tested
+# against a mock DocuSign server in test_esign.py).
+os.environ["DATAVIV_ESIGN_BACKEND"] = "fake"
+os.environ.pop("DATAVIV_DOCUSIGN_CONNECT_SECRET", None)
 
 import pytest
 import pytest_asyncio

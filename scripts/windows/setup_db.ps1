@@ -64,4 +64,4 @@ if ($code -ne 0) { throw 'Migration failed - see above.' }
 Step 'Seeding dev firm, users and matters'
 & $vpy scripts\seed_dev.py
 Write-Progress -Activity 'Database setup' -Completed
-Write-Host "`nDatabase ready. In VS Code press F5 ('API: FastAPI') and open http://localhost:8000/docs" -ForegroundColor Green
+Write-Host "`nDatabase ready. In VS Code press F5 ('API: FastAPI') and open http://127.0.0.1:8010/docs" -ForegroundColor Green

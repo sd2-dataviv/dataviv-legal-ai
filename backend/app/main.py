@@ -25,6 +25,7 @@ from app.modules.drafts.router import router as drafts_router
 from app.modules.esign.router import router as esign_router
 from app.modules.matters.router import router as matters_router
 from app.modules.review.router import router as review_router
+from app.modules.studio.router import router as studio_router
 from app.modules.vault.router import router as vault_router
 from app.modules.workflows.router import router as workflows_router
 
@@ -71,7 +72,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
         logging.getLogger("dataviv").setLevel(logging.INFO)
         tasks.append(asyncio.create_task(worker_loop(stop)))
-    if s.embeddings_backend == "local" and s.embeddings_preload:
+    if s.embeddings_backend in ("local", "ollama") and s.embeddings_preload:
         tasks.append(asyncio.create_task(_preload_embeddings()))
     yield
     stop.set()
@@ -102,6 +103,7 @@ def create_app() -> FastAPI:
     app.include_router(review_router)
     app.include_router(workflows_router)
     app.include_router(agents_router)
+    app.include_router(studio_router)  # drafting studio add-on
 
     ui = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if ui.is_dir():  # built test console (npm run build) served at /ui, same origin as the API

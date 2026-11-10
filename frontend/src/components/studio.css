@@ -1,0 +1,372 @@
+/* Drafting studio add-on. Uses the console's tokens from styles.css; nothing here overrides them. */
+
+.studio {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 0;
+}
+.studio-blocked {
+  display: block;
+  padding: 24px 28px;
+}
+.studio-rail {
+  border-right: 1px solid var(--line);
+  padding: 16px;
+  overflow: auto;
+  min-height: 0;
+}
+.studio-main {
+  background: var(--surface);
+  overflow: auto;
+  min-height: 0;
+}
+.studio-new {
+  width: 100%;
+  justify-content: center;
+}
+.studio-search {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+.studio-search input[type="text"],
+.studio-search > input {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  background: #fff;
+  min-width: 0;
+}
+.studio-mine {
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.studio-rail-head {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.studio-rail-empty {
+  font-size: 13px;
+}
+.studio-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.studio-item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.studio-item:hover {
+  background: var(--surface);
+  border-color: var(--line);
+}
+.studio-item.is-on {
+  background: var(--surface);
+  border-color: var(--green);
+}
+.studio-item-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+.studio-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chip-s-complete {
+  background: var(--green-soft);
+  color: var(--green-strong);
+}
+.chip-s-streaming {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.chip-s-failed {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.studio-pad {
+  padding: 20px 28px 40px;
+  max-width: 1000px;
+}
+.studio-group {
+  margin-top: 20px;
+}
+.studio-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.studio-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+.studio-card {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.studio-card:hover {
+  border-color: var(--green);
+  box-shadow: 0 1px 0 var(--green);
+}
+.studio-card-name {
+  font-weight: 600;
+}
+.studio-card-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.studio-form {
+  display: grid;
+  gap: 12px;
+}
+.studio-back {
+  justify-self: start;
+}
+.studio-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.studio-field-long {
+  grid-column: 1 / -1;
+}
+.studio-form textarea,
+.studio-revise textarea {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  background: #fff;
+  font: inherit;
+  resize: vertical;
+  min-width: 0;
+}
+.studio-req {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--amber);
+}
+.studio-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.studio-doc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+.studio-doc-titles {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+.studio-title-input {
+  width: 100%;
+  font: 700 22px/1.3 var(--font);
+  color: var(--navy);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 2px 6px;
+  margin-left: -7px;
+  background: transparent;
+}
+.studio-title-input:hover,
+.studio-title-input:focus {
+  border-color: var(--line-strong);
+  background: #fff;
+}
+.studio-doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.studio-versions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+.studio-change {
+  font-size: 12.5px;
+}
+.studio-waiting {
+  margin-top: 20px;
+}
+
+.studio-paper {
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 40px;
+  font: 14.5px/1.65 Georgia, "Times New Roman", serif;
+  color: #111;
+  box-shadow: 0 1px 2px rgba(20, 38, 64, 0.06);
+}
+.studio-paper p {
+  margin: 0 0 10px;
+}
+.studio-p {
+  text-align: justify;
+}
+.studio-p-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: 18px !important;
+}
+.studio-p-head {
+  font-weight: 700;
+  margin-top: 16px !important;
+}
+.studio-p-sub {
+  padding-left: 28px;
+}
+.studio-p-item {
+  padding-left: 56px;
+}
+.studio-ph {
+  background: var(--mark);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.studio-caret {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: var(--green);
+  vertical-align: text-bottom;
+  animation: studio-blink 1s steps(2) infinite;
+}
+@keyframes studio-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-caret {
+    animation: none;
+  }
+}
+.studio-notes {
+  margin-top: 24px;
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 12px;
+  font: 13px/1.5 var(--font);
+  color: var(--amber);
+}
+.studio-notes-title {
+  font-weight: 600;
+}
+.studio-notes ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--ink);
+}
+.studio-editor {
+  margin-top: 16px;
+  width: 100%;
+  min-height: 60vh;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 16px;
+  font: 13.5px/1.6 var(--mono);
+  resize: vertical;
+}
+.studio-revise {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* App-level switch between the matter console and the studio */
+.view-switch {
+  display: flex;
+  gap: 2px;
+  background: var(--navy-2);
+  border-radius: var(--radius);
+  padding: 2px;
+}
+.view-switch button {
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--navy-ink);
+  padding: 5px 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.view-switch button.is-on {
+  background: var(--green);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .studio {
+    grid-template-columns: 1fr;
+  }
+  .studio-rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: 40vh;
+  }
+  .studio-fields {
+    grid-template-columns: 1fr;
+  }
+  .studio-pad {
+    padding: 16px;
+  }
+  .studio-paper {
+    padding: 20px 16px;
+  }
+}
+
+/* A finished document with a caveat (stopped early, length limit): usable, but check it. */
+.studio-warn {
+  background: var(--amber-soft);
+  color: var(--amber);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}

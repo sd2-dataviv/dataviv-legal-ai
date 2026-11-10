@@ -709,7 +709,7 @@ function describe(body: unknown): { title: string; detail: string } {
 
 // ---------------------------------------------------------------- core fetch
 
-async function send(method: string, path: string, body?: unknown): Promise<Response> {
+export async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   let payload: BodyInit | undefined;
@@ -930,7 +930,7 @@ export const api = {
   download: (docId: string, fallbackName: string) => saveFrom(`/v1/documents/${docId}/download`, fallbackName),
 };
 
-async function saveFrom(path: string, fallbackName: string): Promise<void> {
+export async function saveFrom(path: string, fallbackName: string): Promise<void> {
   const res = await send("GET", path);
   const cd = res.headers.get("Content-Disposition") ?? "";
   const match = /filename\*=UTF-8''([^;]+)/i.exec(cd);

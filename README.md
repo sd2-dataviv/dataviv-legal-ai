@@ -25,6 +25,7 @@ tenant-isolated, matter-permissioned, fully audited core.
 | 3 | Review tables (templates, cited and verified cells, corrections, Excel/CSV export) + evaluation harness gating releases ([details](docs/steps/step3-review-and-evals.md)) | **Done** — 89 tests green; benchmark 18/18 + 15/15 on Groq |
 | 4 | Workflows: durable runs, 3 built-ins (contract review against a playbook, legal notice, order brief), approvals, firm playbooks, versioned definitions ([details](docs/steps/step4-workflows.md)) | **Done** — 102 tests green on Windows |
 | 5 | Agents: typed tools, step loop with budgets, approvals, matter memory, subagents, full trace; 4 built-in agents ([details](docs/steps/step5-agents.md)) | **Done** — 115 tests green on Windows; live Groq run verified |
+| 6 | Drafting studio (add-on): contracts, legal notices, replies, affidavits, powers of attorney, opinions and letters from the lawyer's own facts, no matter needed; firm-wide history, versions, Word export ([details](docs/steps/step6-drafting-studio.md)) | **Done**: 179 tests green on Windows; live on Ollama gpt-oss:20b |
 
 ## Prerequisites
 

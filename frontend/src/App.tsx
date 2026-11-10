@@ -5,6 +5,7 @@ import { MatterRail } from "./components/MatterRail";
 import { Workspace } from "./components/Workspace";
 import { Inspector, type Selection } from "./components/Inspector";
 import { RequestLog } from "./components/RequestLog";
+import { DraftingStudio } from "./components/DraftingStudio";
 
 function stored(key: string): string | null {
   try {
@@ -30,6 +31,7 @@ export function App() {
   const [selection, setSelection] = useState<Selection>(null);
   const [docsRev, setDocsRev] = useState(0);
   const [mattersRev, setMattersRev] = useState(0);
+  const [view, setView] = useState<"matters" | "studio">(stored("dv.view") === "studio" ? "studio" : "matters");
 
   const list = identities.data ?? [];
   const current: Identity | null =
@@ -43,6 +45,7 @@ export function App() {
 
   useEffect(() => store("dv.user", current?.user_id ?? null), [current?.user_id]);
   useEffect(() => store("dv.matter", matterId), [matterId]);
+  useEffect(() => store("dv.view", view), [view]);
 
   const [health, setHealth] = useState<"ok" | "down" | "unknown">("unknown");
   const [env, setEnv] = useState("");
@@ -69,6 +72,14 @@ export function App() {
           <span className="brand-name">Dataviv AI OS</span>
           <span className="brand-sub">Backend test console</span>
         </div>
+        <nav className="view-switch" aria-label="Area">
+          <button className={view === "matters" ? "is-on" : ""} onClick={() => setView("matters")}>
+            Matters
+          </button>
+          <button className={view === "studio" ? "is-on" : ""} onClick={() => setView("studio")}>
+            Drafting studio
+          </button>
+        </nav>
         <div className={`health health-${health}`} title="GET /health every 15 s">
           <span className="health-dot" aria-hidden="true" />
           {health === "ok" ? `API up${env ? ` · ${env}` : ""}` : health === "down" ? "API down" : "Checking API"}
@@ -124,6 +135,8 @@ export function App() {
               : "Loading identities from the API…"}
           </p>
         </div>
+      ) : view === "studio" ? (
+        <DraftingStudio who={current} key={current.user_id} />
       ) : (
         <div className={`shell ${selection ? "" : "shell-wide"}`} key={current.user_id}>
           <MatterRail

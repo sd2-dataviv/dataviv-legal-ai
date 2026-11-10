@@ -281,7 +281,7 @@ async def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--suite", choices=["assistant", "review", "all"], default="all")
     ap.add_argument(
-        "--backend", choices=["groq", "fake"], help="default: DATAVIV_LLM_BACKEND from backend/.env"
+        "--backend", choices=["groq", "ollama", "fake"], help="default: DATAVIV_LLM_BACKEND from backend/.env"
     )
     ap.add_argument("--limit", type=int, help="only the first N assistant cases")
     ap.add_argument("--database-url", default=os.environ.get("DATAVIV_EVAL_DATABASE_URL", TEST_DB))

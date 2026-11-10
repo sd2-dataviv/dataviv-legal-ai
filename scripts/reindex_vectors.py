@@ -30,7 +30,7 @@ async def main(args: argparse.Namespace) -> int:
     s = get_settings()
     p = hybrid.parts()
     if p is None:
-        print("Semantic search is off. In backend/.env set DATAVIV_EMBEDDINGS_BACKEND (local or http)")
+        print("Semantic search is off. In backend/.env set DATAVIV_EMBEDDINGS_BACKEND (local, http or ollama)")
         print("and DATAVIV_VECTOR_STORE=qdrant, then run this again.")
         return 2
     emb, store = p

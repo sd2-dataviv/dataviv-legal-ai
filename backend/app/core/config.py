@@ -56,7 +56,13 @@ class Settings(BaseSettings):
 
     # Model gateway (FND-06, ADR-012). "fake" = deterministic offline model (tests, no key);
     # "groq" = Groq's OpenAI-compatible API. The key is read from GROQ_API_KEY (no DATAVIV_ prefix).
-    llm_backend: Literal["fake", "groq"] = "fake"
+    # "ollama" = a local Ollama server (ollama_url); set llm_default_model to its model, e.g. gpt-oss:20b.
+    llm_backend: Literal["fake", "groq", "ollama"] = "fake"
+    ollama_url: str = "http://127.0.0.1:11434"
+    # Context window per request (prompt + output). Ollama's own default is too small for prompts with
+    # passages; keep it the same on every call, as changing it makes Ollama reload the model.
+    ollama_num_ctx: int = 16384
+    ollama_keep_alive: str = "30m"  # keep the model loaded between calls
     groq_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("GROQ_API_KEY", "DATAVIV_GROQ_API_KEY")
     )
@@ -95,7 +101,9 @@ class Settings(BaseSettings):
     # Semantic search (Step 1c, ADR-019). Both an embedder and a vector store must be set to turn it on;
     # with either at "none", search is keyword-only exactly as in Step 1.
     #   embeddings_backend: none | fake (tests) | http (TEI or any OpenAI-compatible /embeddings) | local
-    embeddings_backend: Literal["none", "fake", "http", "local"] = "none"
+    #                       | ollama (native /api/embed on ollama_url, or embeddings_url if set; model "bge-m3")
+    # Changing embeddings_model starts a new vector collection: run scripts/reindex_vectors.py afterwards.
+    embeddings_backend: Literal["none", "fake", "http", "local", "ollama"] = "none"
     embeddings_model: str = "BAAI/bge-m3"
     embeddings_dim: int = 1024
     embeddings_url: str | None = None  # http backend, e.g. http://gpu-vm:8080/v1

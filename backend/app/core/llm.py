@@ -6,6 +6,8 @@ for a specific model the policy allows. Backends:
 - `FakeLLM`: offline and deterministic, for tests and for dev without a key.
 - `GroqBackend`: Groq's OpenAI-compatible chat completions over HTTPS, streamed with SSE.
   Rate limits (HTTP 429) are honoured using `retry-after`, up to `llm_max_wait_seconds`.
+- `OllamaBackend`: a local model server (Ollama's native /api/chat, streamed as NDJSON), e.g.
+  gpt-oss:20b on a machine in the office. No key, no per-token cost.
 
 The gateway never logs prompts or keys; it returns token usage, latency and cost so callers can
 store them on the answer and in the audit trail.
@@ -384,6 +386,203 @@ class GroqBackend:
                     raise LLMError(f"Lost the connection to Groq ({type(e).__name__}).") from e
 
 
+# --------------------------------------------------------------------------- Ollama backend (local)
+
+
+def _ollama_usage(obj: dict[str, Any]) -> Usage:
+    return Usage(int(obj.get("prompt_eval_count") or 0), int(obj.get("eval_count") or 0))
+
+
+def parse_ollama_line(line: str) -> list[TextDelta | Usage]:
+    """One NDJSON line of Ollama's /api/chat stream → text deltas and/or final usage.
+
+    gpt-oss reasoning arrives in ``message.thinking`` and is deliberately dropped: only ``content`` is
+    the answer.
+    """
+    line = line.strip()
+    if not line:
+        return []
+    obj = json.loads(line)
+    if obj.get("error"):
+        raise LLMError(f"Local model error: {obj['error']}")
+    out: list[TextDelta | Usage] = []
+    content = (obj.get("message") or {}).get("content")
+    if content:
+        out.append(TextDelta(content))
+    if obj.get("done"):
+        out.append(_ollama_usage(obj))
+    return out
+
+
+def _ollama_detail(body: bytes) -> str:
+    try:
+        obj = json.loads(body)
+    except ValueError:
+        return body[:200].decode(errors="replace")
+    return str(obj.get("error", "")) if isinstance(obj, dict) else ""
+
+
+def _json_object(text: str) -> str:
+    """The JSON object in a reply, without code fences or prose a model may wrap around it."""
+    start, end = text.find("{"), text.rfind("}")
+    return text[start : end + 1] if 0 <= start < end else text
+
+
+OUT_OF_BUDGET = (
+    "The local model used its whole output budget while reasoning, before it answered. "
+    "Try a shorter question, or lower DATAVIV_LLM_REASONING_EFFORT."
+)
+
+
+class OllamaBackend:
+    """A local model server (Ollama, e.g. gpt-oss:20b on a GPU machine) through its native /api/chat.
+
+    The native API is used rather than Ollama's OpenAI-compatible one because only it lets each request
+    set the context window (``num_ctx``). Ollama's default is a few thousand tokens, and a prompt that does
+    not fit is silently cut from the front, which would drop the instructions and the first passages.
+    No API key; nothing leaves the office network.
+    """
+
+    name = "ollama"
+
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        models: list[str],
+        num_ctx: int = 16384,
+        keep_alive: str = "30m",
+        timeout: float = 300.0,
+        reasoning_effort: str = "low",
+        transport: httpx.AsyncBaseTransport | None = None,
+        sleep: Any = asyncio.sleep,
+    ) -> None:
+        self._base = base_url.rstrip("/")
+        self._url = self._base + "/api/chat"
+        self._models = models
+        self._num_ctx = num_ctx
+        self._keep_alive = keep_alive
+        self._timeout = timeout
+        self._effort = reasoning_effort
+        self._transport = transport
+        self._sleep = sleep
+
+    def models(self) -> list[str]:
+        return list(self._models)
+
+    def _client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            timeout=httpx.Timeout(self._timeout, connect=10.0), transport=self._transport
+        )
+
+    def _body(
+        self,
+        model: str,
+        messages: list[Message],
+        max_tokens: int,
+        *,
+        stream: bool,
+        schema: dict[str, Any] | str | None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "model": model,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "stream": stream,
+            "keep_alive": self._keep_alive,
+            # num_predict counts reasoning tokens too; the same num_ctx on every call avoids model reloads
+            "options": {"temperature": 0.2, "num_predict": max_tokens, "num_ctx": self._num_ctx},
+        }
+        if "gpt-oss" in model:  # gpt-oss always reasons; this sets how much (it never enters `content`)
+            body["think"] = self._effort
+        if schema is not None:
+            body["format"] = schema
+        return body
+
+    def _unreachable(self, e: httpx.HTTPError) -> str:
+        return (
+            f"Could not reach the local model server at {self._base} ({type(e).__name__}). "
+            "Check that Ollama is running and listening on the network (OLLAMA_HOST=0.0.0.0)."
+        )
+
+    def _describe(self, model: str, status: int, body: bytes) -> str:
+        detail = _ollama_detail(body)
+        if status == 404:
+            return f"The local model server does not have {model}. On that machine run: ollama pull {model}"
+        return f"The local model server returned HTTP {status}. {detail[:300]}".strip()
+
+    async def complete(
+        self, model: str, messages: list[Message], *, max_tokens: int, json_schema: dict[str, Any] | None
+    ) -> tuple[str, Usage]:
+        body = self._body(model, messages, max_tokens, stream=False, schema=json_schema)
+        json_mode = False
+        async with self._client() as client:
+            for attempt in range(3):
+                try:
+                    resp = await client.post(self._url, json=body)
+                except httpx.HTTPError as e:
+                    raise LLMError(self._unreachable(e)) from e
+                if resp.status_code >= 500 and attempt < 2:
+                    await self._sleep(2.0)
+                    continue
+                if resp.status_code == 400 and json_schema is not None and not json_mode:
+                    # a schema this server cannot enforce: plain JSON mode with the schema in the prompt.
+                    # The caller still validates the reply, so nothing unchecked gets through.
+                    json_mode = True
+                    hint = Message(
+                        "system",
+                        "Reply with ONE JSON object only (no prose, no code fences) that matches this JSON "
+                        "schema:\n" + json.dumps(json_schema, ensure_ascii=False),
+                    )
+                    body = self._body(model, [*messages, hint], max_tokens, stream=False, schema="json")
+                    continue
+                if resp.status_code >= 400:
+                    raise LLMError(
+                        self._describe(model, resp.status_code, resp.content), status=resp.status_code
+                    )
+                obj = resp.json()
+                if obj.get("error"):
+                    raise LLMError(f"Local model error: {obj['error']}")
+                text = (obj.get("message") or {}).get("content") or ""
+                if not text.strip() and obj.get("done_reason") == "length":
+                    raise LLMError(OUT_OF_BUDGET)
+                return (_json_object(text) if json_schema is not None else text), _ollama_usage(obj)
+        raise LLMError("The local model server did not answer.")
+
+    async def stream(
+        self, model: str, messages: list[Message], *, max_tokens: int
+    ) -> AsyncIterator[TextDelta | Notice | Usage]:
+        body = self._body(model, messages, max_tokens, stream=True, schema=None)
+        async with self._client() as client:
+            for attempt in range(3):
+                try:
+                    async with client.stream("POST", self._url, json=body) as resp:
+                        if resp.status_code >= 500 and attempt < 2:
+                            await resp.aread()
+                            yield Notice("The local model is busy; retrying.")
+                            await self._sleep(2.0)
+                            continue
+                        if resp.status_code >= 400:
+                            raise LLMError(
+                                self._describe(model, resp.status_code, await resp.aread()),
+                                status=resp.status_code,
+                            )
+                        answered = False
+                        async for line in resp.aiter_lines():
+                            for item in parse_ollama_line(line):
+                                if isinstance(item, TextDelta):
+                                    answered = True
+                                elif not answered and json.loads(line).get("done_reason") == "length":
+                                    raise LLMError(OUT_OF_BUDGET)
+                                yield item
+                        return
+                except httpx.ConnectError as e:
+                    raise LLMError(self._unreachable(e)) from e
+                except httpx.HTTPError as e:
+                    raise LLMError(
+                        f"Lost the connection to the local model server ({type(e).__name__})."
+                    ) from e
+
+
 # --------------------------------------------------------------------------- policy and gateway
 
 
@@ -497,6 +696,17 @@ def get_backend() -> Backend:
             models=s.llm_models,
             timeout=s.llm_timeout_seconds,
             max_wait=s.llm_max_wait_seconds,
+            reasoning_effort=s.llm_reasoning_effort,
+        )
+    if s.llm_backend == "ollama":
+        # the catalogue must contain the default; otherwise offer just the default (never a cloud-only name)
+        models = s.llm_models if s.llm_default_model in s.llm_models else [s.llm_default_model]
+        return OllamaBackend(
+            s.ollama_url,
+            models=models,
+            num_ctx=s.ollama_num_ctx,
+            keep_alive=s.ollama_keep_alive,
+            timeout=s.llm_timeout_seconds,
             reasoning_effort=s.llm_reasoning_effort,
         )
     return FakeLLM()

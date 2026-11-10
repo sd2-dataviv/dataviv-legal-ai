@@ -16,8 +16,12 @@ from app.core.llm import Done, LLMError, Message, Notice, TextDelta, gateway_for
 
 async def main() -> int:
     s = get_settings()
-    key = s.groq_api_key.get_secret_value().strip() if s.groq_api_key else ""
-    print(f"Backend: {s.llm_backend}   default model: {s.llm_default_model}   GROQ_API_KEY: {'set' if key else 'missing'}")
+    if s.llm_backend == "ollama":
+        where = f"server: {s.ollama_url}   context: {s.ollama_num_ctx} tokens"
+    else:
+        key = s.groq_api_key.get_secret_value().strip() if s.groq_api_key else ""
+        where = f"GROQ_API_KEY: {'set' if key else 'missing'}"
+    print(f"Backend: {s.llm_backend}   default model: {s.llm_default_model}   {where}")
     try:
         gw = gateway_for({})
         print(f"Calling {gw.policy.default} (streamed) ...", flush=True)
@@ -39,7 +43,7 @@ async def main() -> int:
     except LLMError as e:
         print(f"\nFAILED: {e}")
         return 1
-    print("LLM_OK" if s.llm_backend == "groq" else "LLM_OK (offline test model - no key configured)")
+    print("LLM_OK" if s.llm_backend != "fake" else "LLM_OK (offline test model - no key configured)")
     return 0
 
 

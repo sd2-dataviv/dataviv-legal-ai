@@ -507,8 +507,8 @@ function Composer(props: {
       </div>
       {props.backend === "fake" && (
         <p className="note">
-          The API is using the offline test model, which only quotes passages. Set DATAVIV_LLM_BACKEND=groq in
-          backend\.env and restart to use Groq.
+          The API is using the offline test model, which only quotes passages. Set DATAVIV_LLM_BACKEND=ollama
+          (local model) or groq in backend\.env and restart to use a real model.
         </p>
       )}
       {props.modelsError && <ErrorNote>{props.modelsError}</ErrorNote>}

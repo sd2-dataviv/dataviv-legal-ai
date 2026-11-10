@@ -52,11 +52,14 @@ print('\n'.join(bad) if bad else 'ALL OK')"
 Step 'Creating backend\.env from .env.example'
 if (-not (Test-Path 'backend\.env')) { Copy-Item 'backend\.env.example' 'backend\.env'; Write-Host '  created backend\.env' } else { Write-Host '  backend\.env already exists - left unchanged' }
 
-Step 'Model provider (Groq)'
-# Switches the gateway to Groq when backend\.env holds a GROQ_API_KEY. The key itself is never printed.
+Step 'Model provider'
+# Switches the gateway to Groq when backend\.env holds a GROQ_API_KEY, unless it is set to a local model
+# (DATAVIV_LLM_BACKEND=ollama), which is left alone. The key itself is never printed.
 $envPath = Join-Path $root 'backend\.env'
 $envLines = @(Get-Content $envPath)
-if ($envLines | Where-Object { $_ -match '^\s*(DATAVIV_)?GROQ_API_KEY\s*=\s*\S+' }) {
+if ($envLines | Where-Object { $_ -match '^\s*DATAVIV_LLM_BACKEND\s*=\s*ollama' }) {
+  Write-Host '  Using the local model server (DATAVIV_LLM_BACKEND=ollama)'
+} elseif ($envLines | Where-Object { $_ -match '^\s*(DATAVIV_)?GROQ_API_KEY\s*=\s*\S+' }) {
   if ($envLines | Where-Object { $_ -match '^\s*DATAVIV_LLM_BACKEND\s*=' }) {
     $updated = @($envLines -replace '^\s*DATAVIV_LLM_BACKEND\s*=.*$', 'DATAVIV_LLM_BACKEND=groq')
   } else {

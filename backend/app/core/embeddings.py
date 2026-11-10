@@ -9,6 +9,8 @@ Backends sit behind one protocol, chosen by DATAVIV_EMBEDDINGS_BACKEND:
 - ``http``  any OpenAI-compatible ``/embeddings`` endpoint: Hugging Face TEI, Infinity, vLLM, Ollama.
             Production: TEI serving BAAI/bge-m3 on the GPU VM. Pure httpx, so it also runs under
             Windows Smart App Control (ADR-011).
+- ``ollama`` Ollama's native ``/api/embed`` (e.g. ``bge-m3`` on the office GPU server), which keeps the
+            model loaded between searches. Pure httpx as well.
 - ``local`` sentence-transformers inside this process (CPU or GPU). Linux/macOS dev convenience;
             needs ``pip install -e ".[local-embeddings]"`` (PyTorch, ~1 GB with the CPU build).
 
@@ -101,15 +103,18 @@ class HttpEmbedder:
         self._headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._timeout = timeout
 
+    def _request(self, texts: list[str]) -> tuple[str, dict[str, Any]]:
+        return f"{self.base_url}/embeddings", {"model": self.name, "input": texts}
+
     async def embed(self, texts: list[str], kind: Kind) -> list[list[float]]:
         if not texts:
             return []
-        body = {"model": self.name, "input": texts}
+        url, body = self._request(texts)
         last = ""
         async with httpx.AsyncClient(timeout=self._timeout, headers=self._headers) as client:
             for attempt in range(4):
                 try:
-                    resp = await client.post(f"{self.base_url}/embeddings", json=body)
+                    resp = await client.post(url, json=body)
                 except httpx.HTTPError as exc:
                     last = f"cannot reach {self.base_url}: {type(exc).__name__}"
                 else:
@@ -123,14 +128,50 @@ class HttpEmbedder:
 
     def _parse(self, data: dict[str, Any], n: int) -> list[list[float]]:
         items = sorted(data.get("data", []), key=lambda d: d.get("index", 0))
-        if len(items) != n:
-            raise EmbeddingError(f"Embedding service returned {len(items)} vectors for {n} texts")
-        out = [normalise([float(x) for x in d["embedding"]]) for d in items]
+        return self._checked([d["embedding"] for d in items], n)
+
+    def _checked(self, raw: list[list[float]], n: int) -> list[list[float]]:
+        if len(raw) != n:
+            raise EmbeddingError(f"Embedding service returned {len(raw)} vectors for {n} texts")
+        out = [normalise([float(x) for x in v]) for v in raw]
         if out and len(out[0]) != self.dim:
             raise EmbeddingError(
                 f"{self.name} returned {len(out[0])} dimensions; DATAVIV_EMBEDDINGS_DIM is {self.dim}"
             )
         return out
+
+
+class OllamaEmbedder(HttpEmbedder):
+    """Ollama's native ``POST {base_url}/api/embed``, e.g. bge-m3 on the same server as the chat model.
+
+    Used rather than Ollama's OpenAI-compatible /v1/embeddings because only the native API takes
+    ``keep_alive``: without it Ollama unloads the model after five idle minutes and the next search waits
+    for it to load again. Inputs longer than the model's context are truncated by the server.
+    """
+
+    def __init__(
+        self, base_url: str, model: str, dim: int, keep_alive: str = "30m", timeout: float = 60.0
+    ) -> None:
+        super().__init__(base_url, model, dim, None, timeout)
+        self._keep_alive = keep_alive
+
+    def _request(self, texts: list[str]) -> tuple[str, dict[str, Any]]:
+        body = {"model": self.name, "input": texts, "keep_alive": self._keep_alive, "truncate": True}
+        return f"{self.base_url}/api/embed", body
+
+    def _parse(self, data: dict[str, Any], n: int) -> list[list[float]]:
+        return self._checked(data.get("embeddings") or [], n)
+
+    def preload(self) -> None:
+        """Load the model on the server now (blocking; run it in a thread) so the first search is quick."""
+        url, body = self._request(["warm up"])
+        try:
+            resp = httpx.post(url, json=body, timeout=self._timeout)
+        except httpx.HTTPError as exc:
+            raise EmbeddingError(f"cannot reach {self.base_url}: {type(exc).__name__}") from exc
+        if resp.status_code != 200:
+            raise EmbeddingError(f"Embedding service failed (HTTP {resp.status_code}: {resp.text[:200]})")
+        self._parse(resp.json(), 1)  # also checks the dimension
 
 
 # --------------------------------------------------------------------------- local backend
@@ -243,6 +284,16 @@ def _build() -> Embedder:
         key = s.embeddings_api_key.get_secret_value() if s.embeddings_api_key else None
         return HttpEmbedder(
             s.embeddings_url, s.embeddings_model, s.embeddings_dim, key, s.embeddings_timeout_seconds
+        )
+    if (
+        s.embeddings_backend == "ollama"
+    ):  # the chat model's server unless DATAVIV_EMBEDDINGS_URL says otherwise
+        return OllamaEmbedder(
+            s.embeddings_url or s.ollama_url,
+            s.embeddings_model,
+            s.embeddings_dim,
+            s.ollama_keep_alive,
+            s.embeddings_timeout_seconds,
         )
     return LocalEmbedder(
         s.embeddings_model, s.embeddings_dim, s.embeddings_max_tokens, s.embeddings_batch, s.embeddings_device

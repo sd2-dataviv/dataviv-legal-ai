@@ -46,9 +46,12 @@ fi
 step "Creating backend/.env from .env.example"
 if [ -f backend/.env ]; then echo "  backend/.env already exists - left unchanged"; else cp backend/.env.example backend/.env; echo "  created backend/.env"; fi
 
-step "Model provider (Groq)"
-# Switches the gateway to Groq when backend/.env holds a GROQ_API_KEY. The key itself is never printed.
-if grep -Eq '^\s*(DATAVIV_)?GROQ_API_KEY\s*=\s*\S+' backend/.env; then
+step "Model provider"
+# Switches the gateway to Groq when backend/.env holds a GROQ_API_KEY, unless it is set to a local model
+# (DATAVIV_LLM_BACKEND=ollama), which is left alone. The key itself is never printed.
+if grep -Eq '^\s*DATAVIV_LLM_BACKEND\s*=\s*ollama' backend/.env; then
+  echo "  Using the local model server (DATAVIV_LLM_BACKEND=ollama)"
+elif grep -Eq '^\s*(DATAVIV_)?GROQ_API_KEY\s*=\s*\S+' backend/.env; then
   if grep -Eq '^\s*DATAVIV_LLM_BACKEND\s*=\s*groq' backend/.env; then
     echo "  Using Groq (GROQ_API_KEY found, not shown)"
   elif grep -Eq '^\s*DATAVIV_LLM_BACKEND\s*=' backend/.env; then
